@@ -12,9 +12,9 @@ import net.neoforged.fml.common.Mod;
  * Entry point for Galaxy Gravity.
  *
  * Plan for this mod, in order:
- * 1. Gravity fields and the math that picks the pull at a position (this commit).
- * 2. Server-side list of fields per dimension, saved with the world and synced to players.
- * 3. Player and mob movement along the local "down", rotated hitbox and camera.
+ * 1. Gravity fields and the math that picks the pull at a position. Done.
+ * 2. Planets saved per dimension, synced to players, pulling entities toward their center. Done.
+ * 3. Movement, hitbox and camera that turn with the local "down". Next.
  */
 @Mod(GalaxyGravity.MODID)
 public final class GalaxyGravity {
@@ -22,6 +22,9 @@ public final class GalaxyGravity {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public GalaxyGravity(IEventBus modEventBus, ModContainer modContainer) {
+        PlanetSync.register(modEventBus);
+        GravityApplier.register();
+        PlanetCommands.register();
         LOGGER.info("Galaxy Gravity loaded");
     }
 }
