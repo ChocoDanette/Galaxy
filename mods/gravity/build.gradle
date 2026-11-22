@@ -13,4 +13,10 @@ neoForge {
             sourceSet(project(':core').sourceSets.main)
         }
     }
+
+    // Puts Minecraft and NeoForge on the unit test classpath.
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
 }
