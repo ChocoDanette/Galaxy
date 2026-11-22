@@ -1,0 +1,16 @@
+// Shared setup lives in the root build.gradle.
+dependencies {
+    implementation project(':core')
+}
+
+neoForge {
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+        // Load Core alongside Gravity in dev runs.
+        "galaxy_core" {
+            sourceSet(project(':core').sourceSets.main)
+        }
+    }
+}

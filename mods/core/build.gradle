@@ -1,0 +1,8 @@
+// Shared setup lives in the root build.gradle.
+neoForge {
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}

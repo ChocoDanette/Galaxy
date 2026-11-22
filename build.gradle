@@ -1,0 +1,101 @@
+// Shared setup for every mod under mods/. Each mod only declares its own
+// id, name, version and dependencies in its own build.gradle and gradle.properties.
+plugins {
+    id 'net.neoforged.moddev' version '2.0.148' apply false
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'idea'
+    apply plugin: 'net.neoforged.moddev'
+
+    version = project.mod_version
+    group = project.mod_group_id
+
+    base {
+        archivesName = project.mod_id
+    }
+
+    // Mojang ships Java 25 to players in 26.3, so mods target Java 25.
+    java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+    sourceSets.main.resources {
+        srcDir('src/generated/resources')
+        exclude('**/*.bbmodel')
+        exclude('src/generated/**/.cache')
+    }
+
+    configurations {
+        runtimeClasspath.extendsFrom localRuntime
+    }
+
+    dependencies {
+        testImplementation platform('org.junit:junit-bom:5.13.4')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+
+    neoForge {
+        version = project.neo_version
+
+        runs {
+            client {
+                client()
+                systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            }
+            server {
+                server()
+                programArgument '--nogui'
+                systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            }
+            gameTestServer {
+                type = 'gameTestServer'
+                systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            }
+            configureEach {
+                systemProperty 'forge.logging.markers', 'REGISTRIES'
+                logLevel = org.slf4j.event.Level.DEBUG
+            }
+        }
+    }
+
+    // Fills in the ${...} placeholders in src/main/templates (neoforge.mods.toml).
+    def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+        def replaceProperties = [
+                minecraft_version      : project.minecraft_version,
+                minecraft_version_range: project.minecraft_version_range,
+                neo_version            : project.neo_version,
+                mod_id                 : project.mod_id,
+                mod_name               : project.mod_name,
+                mod_license            : project.mod_license,
+                mod_version            : project.mod_version,
+                mod_authors            : project.mod_authors,
+                mod_description        : project.mod_description,
+        ]
+        inputs.properties replaceProperties
+        expand replaceProperties
+        from 'src/main/templates'
+        into 'build/generated/sources/modMetadata'
+    }
+    sourceSets.main.resources.srcDir generateModMetadata
+    neoForge.ideSyncTask generateModMetadata
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    idea {
+        module {
+            downloadSources = true
+            downloadJavadoc = true
+        }
+    }
+}
