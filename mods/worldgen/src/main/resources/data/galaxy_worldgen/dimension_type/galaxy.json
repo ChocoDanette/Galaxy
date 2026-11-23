@@ -1,5 +1,5 @@
 {
-  "ambient_light": 0.1,
+  "ambient_light": 0.5,
   "attributes": {
     "minecraft:gameplay/bed_rule": {
       "can_set_spawn": "never",
@@ -13,13 +13,13 @@
     "minecraft:visual/fog_color": "#05050c",
     "minecraft:visual/cloud_color": "#00ffffff",
     "minecraft:visual/star_brightness": 1.0,
-    "minecraft:visual/ambient_light_color": "#1a1a26"
+    "minecraft:visual/ambient_light_color": "#9494aa"
   },
   "coordinate_scale": 1.0,
   "has_ceiling": false,
   "has_ender_dragon_fight": false,
   "has_fixed_time": true,
-  "has_skylight": true,
+  "has_skylight": false,
   "height": 448,
   "infiniburn": "#minecraft:infiniburn_overworld",
   "logical_height": 448,

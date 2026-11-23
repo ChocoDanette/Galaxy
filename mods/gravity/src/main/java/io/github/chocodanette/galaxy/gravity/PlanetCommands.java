@@ -26,6 +26,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * /galaxy planet remove &lt;number&gt;
  * /galaxy planet clear
  * /galaxy planet centers show|hide   (glowing marker at each gravity center)
+ * /galaxy planet ranges show|hide    (light blue bubble showing how far gravity reaches)
  * </pre>
  */
 public final class PlanetCommands {
@@ -61,7 +62,10 @@ public final class PlanetCommands {
                         .then(Commands.literal("clear").executes(PlanetCommands::clear))
                         .then(Commands.literal("centers")
                                 .then(Commands.literal("show").executes(ctx -> showCenters(ctx, true)))
-                                .then(Commands.literal("hide").executes(ctx -> showCenters(ctx, false))))));
+                                .then(Commands.literal("hide").executes(ctx -> showCenters(ctx, false))))
+                        .then(Commands.literal("ranges")
+                                .then(Commands.literal("show").executes(ctx -> showRanges(ctx, true)))
+                                .then(Commands.literal("hide").executes(ctx -> showRanges(ctx, false))))));
     }
 
     private static int add(CommandContext<CommandSourceStack> ctx, double strength) {
@@ -170,6 +174,16 @@ public final class PlanetCommands {
         ctx.getSource().sendSuccess(() -> Component.literal(show
                 ? "Showing planet centers (gold = sphere, diamond = cube)"
                 : "Hiding planet centers"), true);
+        return 1;
+    }
+
+    private static int showRanges(CommandContext<CommandSourceStack> ctx, boolean show) {
+        ServerLevel level = ctx.getSource().getLevel();
+        PlanetGravityData.get(level).setShowRanges(show);
+        PlanetSync.sendToDimension(level);
+        ctx.getSource().sendSuccess(() -> Component.literal(show
+                ? "Showing each planet's gravity range as a blue bubble"
+                : "Hiding gravity ranges"), true);
         return 1;
     }
 }

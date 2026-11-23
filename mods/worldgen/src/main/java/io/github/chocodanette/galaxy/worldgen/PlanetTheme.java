@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.Blocks;
  * drop off into space as soon as something next to them changed.
  */
 public enum PlanetTheme {
-    VERDANT("verdant", () -> Blocks.GRASS_BLOCK, () -> Blocks.GRASS_BLOCK, () -> Blocks.DIRT,
+    VERDANT("verdant", () -> Blocks.GRASS_BLOCK, () -> PlanetBlocks.PLANET_TURF.get(), () -> Blocks.DIRT,
             () -> Blocks.STONE, () -> Blocks.DEEPSLATE, () -> Blocks.DEEPSLATE,
             0.020, new int[] {6, 5, 4, 2, 2, 2, 1}),
     DUNE("dune", () -> Blocks.SAND, () -> Blocks.SANDSTONE, () -> Blocks.SANDSTONE,
@@ -34,7 +34,7 @@ public enum PlanetTheme {
     CANYON("canyon", () -> Blocks.RED_SAND, () -> Blocks.TERRACOTTA, () -> Blocks.DYED_TERRACOTTA.orange(),
             () -> Blocks.STONE, () -> Blocks.DEEPSLATE, () -> Blocks.DYED_TERRACOTTA.red(),
             0.020, new int[] {3, 3, 3, 6, 2, 1, 1}),
-    FUNGAL("fungal", () -> Blocks.MYCELIUM, () -> Blocks.MYCELIUM, () -> Blocks.DIRT,
+    FUNGAL("fungal", () -> Blocks.MYCELIUM, () -> PlanetBlocks.FUNGAL_TURF.get(), () -> Blocks.DIRT,
             () -> Blocks.STONE, () -> Blocks.DEEPSLATE, () -> Blocks.DEEPSLATE,
             0.018, new int[] {5, 4, 4, 2, 3, 2, 1}),
     CRYSTAL("crystal", () -> Blocks.CALCITE, () -> Blocks.CALCITE, () -> Blocks.CALCITE,
@@ -63,6 +63,11 @@ public enum PlanetTheme {
         this.core = core;
         this.oreChance = oreChance;
         this.oreWeights = oreWeights;
+    }
+
+    /** Whether planet grass and starblooms grow on this kind of planet. */
+    boolean hasPlants() {
+        return this == VERDANT || this == MOSSY;
     }
 
     public String displayName() {

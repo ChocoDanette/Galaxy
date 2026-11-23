@@ -1,6 +1,5 @@
 package io.github.chocodanette.galaxy.gravity;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
@@ -83,11 +82,11 @@ public final class GravityFrames {
         if (!(event.getEntity() instanceof LivingEntity entity)) {
             return;
         }
-        List<GravityField> fields = fieldsFor(entity);
-        if (fields.isEmpty() && !entity.hasData(FRAME)) {
+        GravityWorld world = worldFor(entity);
+        if (world.fields().isEmpty() && !entity.hasData(FRAME)) {
             return;
         }
-        Vec3 down = GravityMath.downDirection(fields, entity.position());
+        Vec3 down = GravityMath.downDirection(world, entity.position());
         GravityFrame frame = entity.getData(FRAME);
         Direction axisBefore = boxAxis(frame);
         frame.tick(down.scale(-1));
@@ -122,10 +121,11 @@ public final class GravityFrames {
         entity.setPos(start);
     }
 
-    static List<GravityField> fieldsFor(Entity entity) {
+    /** The gravity rules of the entity's dimension, from the server's list or the player's copy. */
+    public static GravityWorld worldFor(Entity entity) {
         if (entity.level() instanceof ServerLevel level) {
-            return PlanetGravityData.get(level).fields();
+            return PlanetGravityData.get(level).world();
         }
-        return ClientPlanets.fields();
+        return ClientPlanets.world();
     }
 }

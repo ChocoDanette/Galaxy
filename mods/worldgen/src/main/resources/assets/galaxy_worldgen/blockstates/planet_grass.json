@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=up": {
+      "model": "galaxy_worldgen:block/planet_grass"
+    },
+    "facing=down": {
+      "model": "galaxy_worldgen:block/planet_grass",
+      "x": 180
+    },
+    "facing=north": {
+      "model": "galaxy_worldgen:block/planet_grass",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "galaxy_worldgen:block/planet_grass",
+      "x": 90,
+      "y": 180
+    },
+    "facing=east": {
+      "model": "galaxy_worldgen:block/planet_grass",
+      "x": 90,
+      "y": 90
+    },
+    "facing=west": {
+      "model": "galaxy_worldgen:block/planet_grass",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

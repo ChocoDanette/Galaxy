@@ -1,5 +1,6 @@
 package io.github.chocodanette.galaxy.worldgen;
 
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
 import io.github.chocodanette.galaxy.gravity.GravityField;
@@ -80,6 +81,41 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         Material rock = inner > 0.7 ? Material.CORE : inner > 0.4 ? Material.DEEP : Material.STONE;
         Material.Ore ore = oreAt(x, y, z, inner);
         return ore == null ? rock : Material.ore(ore, rock != Material.STONE);
+    }
+
+    /** Share of open surface spots that grow a plant, on planets that have plants. */
+    static final double PLANT_CHANCE = 0.15;
+    /** Share of those plants that are starblooms instead of grass. */
+    static final double BLOOM_SHARE = 0.12;
+
+    /** A plant growing at a spot: which one, and which way it grows. */
+    public record PlantSpot(boolean bloom, Direction up) {
+    }
+
+    /**
+     * The plant growing in this empty spot, or null. Plants stand on the surface and grow
+     * away from the center, on every side of the planet.
+     */
+    public PlantSpot plantAt(int x, int y, int z) {
+        if (!theme.hasPlants()) {
+            return null;
+        }
+        double dx = x + 0.5 - center.x;
+        double dy = y + 0.5 - center.y;
+        double dz = z + 0.5 - center.z;
+        Direction up = Direction.getApproximateNearest(dx, dy, dz);
+        Material below = materialAt(x - up.getStepX(), y - up.getStepY(), z - up.getStepZ());
+        if (below != Material.TOP && below != Material.SIDE) {
+            return null;
+        }
+        if (materialAt(x, y, z) != null) {
+            return null;
+        }
+        double roll = Hashing.unit(seed ^ 0x6A09E667F3BCC909L, x, y, z);
+        if (roll >= PLANT_CHANCE) {
+            return null;
+        }
+        return new PlantSpot(roll < PLANT_CHANCE * BLOOM_SHARE, up);
     }
 
     /** Distance from the center to the surface in this direction, with gentle hills. */

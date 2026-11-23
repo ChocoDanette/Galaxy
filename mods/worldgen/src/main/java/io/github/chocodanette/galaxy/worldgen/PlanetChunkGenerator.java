@@ -9,6 +9,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.ChunkPos;
@@ -67,7 +68,7 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
 
         for (Planet planet : GalaxyLayout.planetsTouching(randomState.seed(), minX, minZ, maxX, maxZ)) {
             Vec3 c = planet.center();
-            double extent = planet.extent();
+            double extent = planet.extent() + 1.0;
             int x0 = Math.max(minX, (int) Math.floor(c.x - extent));
             int x1 = Math.min(maxX, (int) Math.floor(c.x + extent));
             int z0 = Math.max(minZ, (int) Math.floor(c.z - extent));
@@ -81,6 +82,13 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
                         Material material = planet.materialAt(x, y, z);
                         if (material != null) {
                             chunk.setBlockState(cursor.set(x, y, z), theme.block(material).defaultBlockState());
+                            continue;
+                        }
+                        Planet.PlantSpot plant = planet.plantAt(x, y, z);
+                        if (plant != null) {
+                            Block block = plant.bloom() ? PlanetBlocks.STARBLOOM.get() : PlanetBlocks.PLANET_GRASS.get();
+                            chunk.setBlockState(cursor.set(x, y, z),
+                                    block.defaultBlockState().setValue(PlanetPlantBlock.FACING, plant.up()));
                         }
                     }
                 }

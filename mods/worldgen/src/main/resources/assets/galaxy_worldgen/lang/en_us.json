@@ -1,4 +1,8 @@
 {
   "galaxy_worldgen.bed.no_sleep_in_space": "There's no night to sleep through in space",
-  "biome.galaxy_worldgen.space": "Space"
+  "biome.galaxy_worldgen.space": "Space",
+  "block.galaxy_worldgen.planet_turf": "Planet Turf",
+  "block.galaxy_worldgen.fungal_turf": "Fungal Turf",
+  "block.galaxy_worldgen.planet_grass": "Planet Grass",
+  "block.galaxy_worldgen.starbloom": "Starbloom"
 }

@@ -11,6 +11,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The planets of one dimension, saved with the world. The server owns this list;
@@ -19,12 +20,15 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 public final class PlanetGravityData extends SavedData {
     private static final Codec<PlanetGravityData> FULL_CODEC = RecordCodecBuilder.create(i -> i.group(
             GravityField.CODEC.listOf().fieldOf("planets").forGetter(data -> data.fields),
-            Codec.BOOL.optionalFieldOf("show_centers", true).forGetter(data -> data.showCenters)
+            Codec.BOOL.optionalFieldOf("show_centers", true).forGetter(data -> data.showCenters),
+            Codec.BOOL.optionalFieldOf("show_ranges", true).forGetter(data -> data.showRanges),
+            Codec.DOUBLE.optionalFieldOf("space_pull", 0.0).forGetter(data -> data.spacePull),
+            Vec3.CODEC.listOf().optionalFieldOf("anchors", List.of()).forGetter(data -> data.anchors)
     ).apply(i, PlanetGravityData::new));
 
     /** Reads saves from before center markers (a plain list of planets) as well. */
     public static final Codec<PlanetGravityData> CODEC = Codec.either(FULL_CODEC, GravityField.CODEC.listOf())
-            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true)), Either::left);
+            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true, true, 0.0, List.of())), Either::left);
 
     public static final SavedDataType<PlanetGravityData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(GalaxyGravity.MODID, "planets"),
@@ -32,14 +36,21 @@ public final class PlanetGravityData extends SavedData {
 
     private final List<GravityField> fields;
     private boolean showCenters;
+    private boolean showRanges;
+    private double spacePull;
+    private final List<Vec3> anchors;
 
     public PlanetGravityData() {
-        this(List.of(), true);
+        this(List.of(), true, true, 0.0, List.of());
     }
 
-    private PlanetGravityData(List<GravityField> fields, boolean showCenters) {
+    private PlanetGravityData(List<GravityField> fields, boolean showCenters, boolean showRanges,
+            double spacePull, List<Vec3> anchors) {
+        this.spacePull = spacePull;
+        this.anchors = new ArrayList<>(anchors);
         this.fields = new ArrayList<>(fields);
         this.showCenters = showCenters;
+        this.showRanges = showRanges;
     }
 
     public static PlanetGravityData get(ServerLevel level) {
@@ -73,6 +84,46 @@ public final class PlanetGravityData extends SavedData {
     public void setShowCenters(boolean show) {
         showCenters = show;
         setDirty();
+    }
+
+    /** Whether players see a light blue bubble showing how far each planet's gravity reaches. */
+    public boolean showRanges() {
+        return showRanges;
+    }
+
+    public void setShowRanges(boolean show) {
+        showRanges = show;
+        setDirty();
+    }
+
+    /** This dimension's planets and space pull, ready for the gravity math. */
+    public GravityWorld world() {
+        return new GravityWorld(fields, spacePull, anchors);
+    }
+
+    /**
+     * Turns on a weak pull toward the nearest planet in the empty space between planets, as a
+     * share of normal gravity (0 turns it off and leaves vanilla gravity there).
+     */
+    public void setSpacePull(double pull) {
+        if (pull != spacePull) {
+            spacePull = pull;
+            setDirty();
+        }
+    }
+
+    public double spacePull() {
+        return spacePull;
+    }
+
+    /** Marks a planet center as a home planet that pulls harder from space. Returns true if new. */
+    public boolean addAnchor(Vec3 center) {
+        if (anchors.contains(center)) {
+            return false;
+        }
+        anchors.add(center);
+        setDirty();
+        return true;
     }
 
     public void clear() {

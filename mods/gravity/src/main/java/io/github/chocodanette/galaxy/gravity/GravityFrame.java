@@ -21,6 +21,11 @@ public final class GravityFrame {
 
     private final Quaternionf rotation = new Quaternionf();
     private final Quaternionf previous = new Quaternionf();
+    /**
+     * Distance to the planet's surface of the spot the entity last stood on, so gravity knows
+     * how high above it the entity has risen. NaN until it has touched the ground.
+     */
+    private double takeoffDistance = Double.NaN;
 
     /** Turns toward a target "up" (unit vector), at most {@link #MAX_TURN_DEGREES_PER_TICK}. */
     public void tick(Vec3 targetUp) {
@@ -37,6 +42,14 @@ public final class GravityFrame {
             turn = new Quaternionf().slerp(turn, maxStep / angle);
         }
         rotation.premul(turn).normalize();
+    }
+
+    public double takeoffDistance() {
+        return takeoffDistance;
+    }
+
+    public void setTakeoffDistance(double distance) {
+        takeoffDistance = distance;
     }
 
     /** True when the entity is tilted away from world up, so our movement rules apply. */

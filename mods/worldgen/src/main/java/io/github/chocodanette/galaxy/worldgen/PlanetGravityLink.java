@@ -34,6 +34,11 @@ public final class PlanetGravityLink {
     /** How many cells around a player get their gravity ready (2 cells = about 190 blocks). */
     private static final int CELLS_AROUND_PLAYER = 2;
     private static final int TICKS_BETWEEN_CHECKS = 20;
+    /**
+     * Between planets, things drift toward the nearest planet with this share of its pull
+     * (the galaxy's home planet pulls 1.5 times harder). Lost items and players float back.
+     */
+    public static final double SPACE_PULL = 0.08;
 
     private PlanetGravityLink() {
     }
@@ -74,11 +79,24 @@ public final class PlanetGravityLink {
         for (GravityField field : existing) {
             known.add(field.center());
         }
-
+        boolean added = false;
+        if (data.spacePull() != SPACE_PULL) {
+            data.setSpacePull(SPACE_PULL);
+            added = true;
+        }
         long seed = level.getSeed();
+        int galaxy = Galaxy.numberAt(pos.x);
+        if (galaxy > 0) {
+            Planet home = GalaxyLayout.arrivalPlanet(seed, galaxy);
+            if (known.add(home.center())) {
+                data.add(home.gravityField());
+                added = true;
+            }
+            added |= data.addAnchor(home.center());
+        }
+
         int cellX = GalaxyLayout.cellOf(pos.x);
         int cellZ = GalaxyLayout.cellOf(pos.z);
-        boolean added = false;
         for (int dx = -CELLS_AROUND_PLAYER; dx <= CELLS_AROUND_PLAYER; dx++) {
             for (int dz = -CELLS_AROUND_PLAYER; dz <= CELLS_AROUND_PLAYER; dz++) {
                 var planet = GalaxyLayout.planetInCell(seed, cellX + dx, cellZ + dz);

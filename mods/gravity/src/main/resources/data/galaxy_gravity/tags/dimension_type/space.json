@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    { "id": "galaxy_worldgen:galaxy", "required": false },
+    { "id": "galaxy_ship:ship", "required": false }
+  ]
+}

@@ -5,13 +5,21 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "EntityMixin",
+    "FallingBlockMixin",
     "LivingEntityMixin",
-    "PlayerMixin"
+    "PlacementMixin",
+    "PlayerMixin",
+    "UseOnContextMixin"
   ],
   "client": [
     "client.CameraMixin",
+    "client.ClientLevelMixin",
+    "client.FreeParticleMixin",
+    "client.ItemEntityRendererMixin",
     "client.LevelExtractorMixin",
-    "client.LocalPlayerMixin"
+    "client.LocalPlayerMixin",
+    "client.ParticleMixin",
+    "client.SkyRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

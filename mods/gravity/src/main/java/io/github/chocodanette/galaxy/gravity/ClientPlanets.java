@@ -7,16 +7,27 @@ import java.util.List;
  * Holds no client-only classes, so it is safe to load on a dedicated server (where it stays empty).
  */
 public final class ClientPlanets {
-    private static volatile List<GravityField> fields = List.of();
+    private static volatile GravityWorld world = GravityWorld.EMPTY;
+    private static volatile boolean showRanges = true;
 
     private ClientPlanets() {
     }
 
     public static List<GravityField> fields() {
-        return fields;
+        return world.fields();
     }
 
-    static void set(List<GravityField> newFields) {
-        fields = List.copyOf(newFields);
+    public static GravityWorld world() {
+        return world;
+    }
+
+    /** Whether the server wants the blue gravity range bubbles drawn. */
+    public static boolean showRanges() {
+        return showRanges;
+    }
+
+    static void set(GravityWorld newWorld, boolean newShowRanges) {
+        world = newWorld;
+        showRanges = newShowRanges;
     }
 }
