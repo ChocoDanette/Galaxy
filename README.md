@@ -59,6 +59,8 @@ On a cube, each face walks like flat ground, and gravity only bends over the las
 
 Other commands: `/galaxy planet list`, `/galaxy planet remove <number>`, `/galaxy planet clear`.
 
+Each planet's gravity center shows as a small glowing block (gold for a sphere, diamond for a cube). Its outline shows through blocks, so you can see the center inside the planet. Turn the markers off and on with `/galaxy planet centers hide` and `/galaxy planet centers show`.
+
 What works so far (our own gravity, no other mods needed):
 
 - Planets are saved with the world and sent to every player.

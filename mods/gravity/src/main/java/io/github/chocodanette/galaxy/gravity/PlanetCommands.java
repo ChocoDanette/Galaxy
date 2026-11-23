@@ -25,6 +25,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * /galaxy planet list
  * /galaxy planet remove &lt;number&gt;
  * /galaxy planet clear
+ * /galaxy planet centers show|hide   (glowing marker at each gravity center)
  * </pre>
  */
 public final class PlanetCommands {
@@ -57,7 +58,10 @@ public final class PlanetCommands {
                         .then(Commands.literal("remove")
                                 .then(Commands.argument("number", IntegerArgumentType.integer(1))
                                         .executes(PlanetCommands::remove)))
-                        .then(Commands.literal("clear").executes(PlanetCommands::clear))));
+                        .then(Commands.literal("clear").executes(PlanetCommands::clear))
+                        .then(Commands.literal("centers")
+                                .then(Commands.literal("show").executes(ctx -> showCenters(ctx, true)))
+                                .then(Commands.literal("hide").executes(ctx -> showCenters(ctx, false))))));
     }
 
     private static int add(CommandContext<CommandSourceStack> ctx, double strength) {
@@ -111,6 +115,7 @@ public final class PlanetCommands {
         }
         PlanetGravityData.get(level).add(field);
         PlanetSync.sendToDimension(level);
+        PlanetMarkers.refresh(level);
         Vec3 c = field.center();
         ctx.getSource().sendSuccess(() -> Component.literal(String.format(
                 "Added a %s planet at %.1f %.1f %.1f (%s %.1f, range %.0f, strength %.2f)",
@@ -144,6 +149,7 @@ public final class PlanetCommands {
             return 0;
         }
         PlanetSync.sendToDimension(level);
+        PlanetMarkers.refresh(level);
         ctx.getSource().sendSuccess(() -> Component.literal("Removed planet " + number), true);
         return 1;
     }
@@ -152,7 +158,18 @@ public final class PlanetCommands {
         ServerLevel level = ctx.getSource().getLevel();
         PlanetGravityData.get(level).clear();
         PlanetSync.sendToDimension(level);
+        PlanetMarkers.refresh(level);
         ctx.getSource().sendSuccess(() -> Component.literal("Removed every planet in this dimension"), true);
+        return 1;
+    }
+
+    private static int showCenters(CommandContext<CommandSourceStack> ctx, boolean show) {
+        ServerLevel level = ctx.getSource().getLevel();
+        PlanetGravityData.get(level).setShowCenters(show);
+        PlanetMarkers.refresh(level);
+        ctx.getSource().sendSuccess(() -> Component.literal(show
+                ? "Showing planet centers (gold = sphere, diamond = cube)"
+                : "Hiding planet centers"), true);
         return 1;
     }
 }

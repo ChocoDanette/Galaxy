@@ -3,7 +3,9 @@ package io.github.chocodanette.galaxy.gravity;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -15,21 +17,29 @@ import net.minecraft.world.level.saveddata.SavedDataType;
  * players get a copy through {@link SyncPlanetsPayload}.
  */
 public final class PlanetGravityData extends SavedData {
-    public static final Codec<PlanetGravityData> CODEC = GravityField.CODEC.listOf()
-            .xmap(PlanetGravityData::new, data -> data.fields);
+    private static final Codec<PlanetGravityData> FULL_CODEC = RecordCodecBuilder.create(i -> i.group(
+            GravityField.CODEC.listOf().fieldOf("planets").forGetter(data -> data.fields),
+            Codec.BOOL.optionalFieldOf("show_centers", true).forGetter(data -> data.showCenters)
+    ).apply(i, PlanetGravityData::new));
+
+    /** Reads saves from before center markers (a plain list of planets) as well. */
+    public static final Codec<PlanetGravityData> CODEC = Codec.either(FULL_CODEC, GravityField.CODEC.listOf())
+            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true)), Either::left);
 
     public static final SavedDataType<PlanetGravityData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(GalaxyGravity.MODID, "planets"),
             PlanetGravityData::new, CODEC);
 
     private final List<GravityField> fields;
+    private boolean showCenters;
 
     public PlanetGravityData() {
-        this(List.of());
+        this(List.of(), true);
     }
 
-    private PlanetGravityData(List<GravityField> fields) {
+    private PlanetGravityData(List<GravityField> fields, boolean showCenters) {
         this.fields = new ArrayList<>(fields);
+        this.showCenters = showCenters;
     }
 
     public static PlanetGravityData get(ServerLevel level) {
@@ -53,6 +63,16 @@ public final class PlanetGravityData extends SavedData {
         fields.remove(index);
         setDirty();
         return true;
+    }
+
+    /** Whether a glowing marker shows each planet's gravity center. */
+    public boolean showCenters() {
+        return showCenters;
+    }
+
+    public void setShowCenters(boolean show) {
+        showCenters = show;
+        setDirty();
     }
 
     public void clear() {
