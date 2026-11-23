@@ -14,7 +14,9 @@ rootProject.name = 'galaxy'
 include 'core'
 include 'gravity'
 include 'worldgen'
+include 'ship'
 
 project(':core').projectDir = file('mods/core')
 project(':gravity').projectDir = file('mods/gravity')
 project(':worldgen').projectDir = file('mods/worldgen')
+project(':ship').projectDir = file('mods/ship')

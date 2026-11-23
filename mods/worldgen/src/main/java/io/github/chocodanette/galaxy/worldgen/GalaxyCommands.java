@@ -19,7 +19,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /**
- * Commands to visit the galaxy until the ship can fly there:
+ * Operator commands to visit the galaxy for testing. Players travel with the ship's console
+ * (Galaxy Ship mod) instead:
  * <pre>
  * /galaxy go [number]   travel to a galaxy (1 if no number), landing on its middle planet
  * /galaxy leave         go back to the overworld spawn

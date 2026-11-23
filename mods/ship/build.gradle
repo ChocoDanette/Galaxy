@@ -1,0 +1,30 @@
+// Shared setup lives in the root build.gradle.
+dependencies {
+    implementation project(':core')
+    implementation project(':gravity')
+    implementation project(':worldgen')
+}
+
+neoForge {
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+        // Load the other Galaxy mods alongside the Ship in dev runs.
+        "galaxy_core" {
+            sourceSet(project(':core').sourceSets.main)
+        }
+        "galaxy_gravity" {
+            sourceSet(project(':gravity').sourceSets.main)
+        }
+        "galaxy_worldgen" {
+            sourceSet(project(':worldgen').sourceSets.main)
+        }
+    }
+
+    // Puts Minecraft and NeoForge on the unit test classpath.
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
+}
