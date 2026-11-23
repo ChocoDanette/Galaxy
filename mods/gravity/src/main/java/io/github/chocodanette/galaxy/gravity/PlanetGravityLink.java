@@ -38,7 +38,9 @@ public final class PlanetGravityLink {
             return;
         }
         Vec3 down = GravityMath.downDirection(field.get(), entity.position(), GravityMath.VANILLA_DOWN);
-        Direction direction = GravityMath.nearestDirection(down, component.getCurrGravityDirection());
+        // Compare against last tick's direction: during this event Gravity Changer has already
+        // reset the current direction to the base one, which would defeat the switch margin.
+        Direction direction = GravityMath.nearestDirection(down, component.getPrevGravityDirection());
         component.applyGravityDirectionEffect(direction, RotationParameters.getDefault(), PRIORITY);
         component.applyGravityStrengthEffect(field.get().strength());
     }
