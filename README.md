@@ -11,8 +11,9 @@ Every mod in the pack is its own Gradle project under `mods/`. They share one bu
 | `mods/core` | `galaxy_core` | Shared code: ids, networking and save data used by the other mods |
 | `mods/gravity` | `galaxy_gravity` | Planet gravity that pulls toward a planet's center |
 | `mods/worldgen` | `galaxy_worldgen` | Galaxy Generation: the galaxy dimension and its generated planets |
+| `mods/ship` | `galaxy_ship` | Galaxy Ship: the crew's shared ship, its console and fuel |
 
-Planned next: Ship, Survival, Creatures.
+Planned next: Survival, Creatures.
 
 ## Requirements
 
@@ -80,7 +81,7 @@ Galaxy Generation adds a dimension of empty, starry space (`galaxy_worldgen:gala
 - A planet is a sphere (6 to 28 blocks radius, with gentle hills) or a cube (11 to 27 blocks wide, flat faces). Its kind decides its blocks: verdant, dune, frost, rocky, ember, mossy, canyon, fungal or crystal. Every planet has a surface layer, soil, rock, a deep layer and a core, with ores in clusters. Gold, redstone and lapis only appear deeper in, diamonds only in the core.
 - Each planet gets its gravity automatically: the server adds it to the Gravity mod's planet list when a player comes within about 190 blocks, and players receive it like any other planet.
 
-Commands (cheats or operator needed):
+Players travel with the ship (see below). For testing, operators can also use these commands:
 
 ```
 /galaxy go [number]   travel to a galaxy (1 if no number), landing on the planet in its middle
@@ -89,6 +90,29 @@ Commands (cheats or operator needed):
 ```
 
 Known limits: there's no gravity between planets, so falling off into open space drops you into the void. Planets have no plants, caves or structures yet.
+
+## The ship
+
+Galaxy Ship gives the crew one shared home: a ship floating in its own dimension of empty, starry space (`galaxy_ship:ship`). The ship never moves as blocks. It stays put while specks of starlight stream past the windows, and flying is done at the console.
+
+- The ship is built once per world, the first time the server starts with the mod: a white hull 25 blocks long with a glass cockpit at the nose, side windows, wings, glowing engines, two chests, a crafting table and a furnace.
+- New players start on board, and players who die without a bed wake up on board. A bed placed on the ship sets your spawn there (you can't sleep in space).
+- **Console** (at the front): right-click to open the flight screen. "Land on a planet" sends you to the arrival planet of the galaxy the ship is parked at. "Jump to galaxy N" flies the whole ship to the next galaxy for everyone on board.
+- **Fuel**: a jump burns 8 fuel; the tank holds 64 and a new ship starts with 16. Right-click the console holding coal or charcoal (1 fuel each) or coal blocks (9 each) to refuel.
+- **Return pad**: a glowing pad appears where you land. Right-click it to beam back up to the ship.
+- The console and pads can't be broken in survival. The server checks every button press (you must stand near a real console), so it works the same for every player in multiplayer.
+
+Operator commands for testing:
+
+```
+/ship board             teleport to the ship
+/ship info              where the ship is parked and its fuel
+/ship fuel <amount>     set the fuel
+/ship galaxy <number>   park the ship at a galaxy without using fuel
+/ship rebuild           put the ship's blocks back as new
+```
+
+Needs all four jars (core, gravity, worldgen, ship) on the client and the server.
 
 ## Adding a new mod
 
