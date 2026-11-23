@@ -7,7 +7,9 @@
     "EntityMixin",
     "FallingBlockMixin",
     "LivingEntityMixin",
-    "PlayerMixin"
+    "PlacementMixin",
+    "PlayerMixin",
+    "UseOnContextMixin"
   ],
   "client": [
     "client.CameraMixin",
