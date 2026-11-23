@@ -21,7 +21,7 @@ public final class PlanetSync {
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar(GalaxyGravity.MODID).versioned("3").playToClient(
+        event.registrar(GalaxyGravity.MODID).versioned("4").playToClient(
                 SyncPlanetsPayload.TYPE,
                 SyncPlanetsPayload.STREAM_CODEC,
                 (payload, context) -> ClientPlanets.set(new GravityWorld(payload.fields(), payload.spacePull(), payload.anchors()), payload.showRanges()));

@@ -1,5 +1,6 @@
 package io.github.chocodanette.galaxy.worldgen;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 import net.minecraft.world.level.block.Block;
@@ -70,6 +71,35 @@ public enum PlanetTheme {
         return this == VERDANT || this == MOSSY;
     }
 
+    /** Whether the top block falls (sand, gravel), so caves and inner ground must avoid it. */
+    boolean topFalls() {
+        return this == DUNE || this == ROCKY || this == CANYON;
+    }
+
+    /** The kinds of trees that grow here (none on bare planets). */
+    List<Trees.Style> treeStyles() {
+        return switch (this) {
+            case VERDANT -> List.of(Trees.Style.OAK, Trees.Style.OAK, Trees.Style.BIRCH);
+            case MOSSY -> List.of(Trees.Style.AZALEA);
+            case FROST -> List.of(Trees.Style.SPRUCE);
+            case FUNGAL -> List.of(Trees.Style.RED_MUSHROOM, Trees.Style.BROWN_MUSHROOM);
+            case EMBER -> List.of(Trees.Style.CRIMSON);
+            default -> List.of();
+        };
+    }
+
+    /** How many tries at a tree per block of surface; many tries miss, so it's a rough guide. */
+    double treeDensity() {
+        return switch (this) {
+            case VERDANT -> 0.014;
+            case MOSSY -> 0.012;
+            case FROST -> 0.008;
+            case FUNGAL -> 0.006;
+            case EMBER -> 0.005;
+            default -> 0.0;
+        };
+    }
+
     public String displayName() {
         return name;
     }
@@ -93,6 +123,7 @@ public enum PlanetTheme {
             case STONE -> stone.get();
             case DEEP -> deep.get();
             case CORE -> core.get();
+            case GLOW -> Blocks.SHROOMLIGHT;
             default -> material.ore().block(material.isDeepOre());
         };
     }

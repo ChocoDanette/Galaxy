@@ -1,5 +1,6 @@
 package io.github.chocodanette.galaxy.worldgen;
 
+import java.util.List;
 import java.util.Set;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -18,6 +19,8 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
+import io.github.chocodanette.galaxy.gravity.GravityField;
+
 /**
  * Operator commands to visit the galaxy for testing. Players travel with the ship's console
  * (Galaxy Ship mod) instead:
@@ -25,6 +28,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * /galaxy go [number]   travel to a galaxy (1 if no number), landing on its middle planet
  * /galaxy leave         go back to the overworld spawn
  * /galaxy info          what galaxy and planet you're near
+ * /galaxy find &lt;kind&gt;   jump to the nearest hollow planet, gateway planets, planet with
+ *                       caves or planet with trees in the galaxy you're in
  * </pre>
  */
 public final class GalaxyCommands {
@@ -43,7 +48,68 @@ public final class GalaxyCommands {
                         .then(Commands.argument("number", IntegerArgumentType.integer(1, Galaxy.MAX_NUMBER))
                                 .executes(ctx -> go(ctx, IntegerArgumentType.getInteger(ctx, "number")))))
                 .then(Commands.literal("leave").executes(GalaxyCommands::leave))
-                .then(Commands.literal("info").executes(GalaxyCommands::info)));
+                .then(Commands.literal("info").executes(GalaxyCommands::info))
+                .then(Commands.literal("find")
+                        .then(Commands.literal("hollow").executes(ctx -> find(ctx, "hollow")))
+                        .then(Commands.literal("gateway").executes(ctx -> find(ctx, "gateway")))
+                        .then(Commands.literal("caves").executes(ctx -> find(ctx, "caves")))
+                        .then(Commands.literal("trees").executes(ctx -> find(ctx, "trees")))));
+    }
+
+    /** How many cells around the player /galaxy find looks through (about 1400 blocks). */
+    private static final int FIND_CELLS = 15;
+
+    private static boolean matches(List<Planet> cell, String kind) {
+        return switch (kind) {
+            case "hollow" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.HOLLOW;
+            case "gateway" -> cell.size() > 1;
+            case "caves" -> cell.stream().anyMatch(Planet::caves);
+            default -> cell.stream().anyMatch(p -> !p.trees().isEmpty());
+        };
+    }
+
+    private static int find(CommandContext<CommandSourceStack> ctx, String kind) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        ServerLevel level = ctx.getSource().getLevel();
+        if (!level.dimension().equals(PlanetGravityLink.GALAXY) || Galaxy.numberAt(player.getX()) == 0) {
+            ctx.getSource().sendFailure(Component.literal("Go to a galaxy first, with /galaxy go."));
+            return 0;
+        }
+        long seed = level.getSeed();
+        int cellX = GalaxyLayout.cellOf(player.getX());
+        int cellZ = GalaxyLayout.cellOf(player.getZ());
+        Planet found = null;
+        double best = Double.MAX_VALUE;
+        for (int dx = -FIND_CELLS; dx <= FIND_CELLS; dx++) {
+            for (int dz = -FIND_CELLS; dz <= FIND_CELLS; dz++) {
+                List<Planet> cell = GalaxyLayout.planetsInCell(seed, cellX + dx, cellZ + dz);
+                if (cell.isEmpty() || !matches(cell, kind)) {
+                    continue;
+                }
+                Planet planet = kind.equals("caves") || kind.equals("trees")
+                        ? cell.stream().filter(p -> kind.equals("caves") ? p.caves() : !p.trees().isEmpty())
+                                .findFirst().orElseThrow()
+                        : cell.get(0);
+                double distance = planet.center().distanceToSqr(player.position());
+                if (distance < best && distance > 1.0) {
+                    best = distance;
+                    found = planet;
+                }
+            }
+        }
+        if (found == null) {
+            ctx.getSource().sendFailure(Component.literal("No " + kind + " planet near here. Try another galaxy."));
+            return 0;
+        }
+        Vec3 spot = found.landingSpot();
+        PlanetGravityLink.addPlanetsAround(level, spot, true);
+        player.teleportTo(level, spot.x, spot.y, spot.z, Set.of(), player.getYRot(), 0.0F, true);
+        Planet planet = found;
+        ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                "Landed on a %s %s planet (%s), center %.0f %.0f %.0f.", planet.theme().displayName(),
+                planet.shape().getSerializedName(), kind, planet.center().x, planet.center().y, planet.center().z)),
+                false);
+        return 1;
     }
 
     private static int go(CommandContext<CommandSourceStack> ctx, int number) throws CommandSyntaxException {
@@ -93,12 +159,14 @@ public final class GalaxyCommands {
         Galaxy galaxy = Galaxy.of(level.getSeed(), number);
         StringBuilder text = new StringBuilder(String.format(
                 "Galaxy %d: %d blocks wide, common planets: %s.", number, galaxy.radius() * 2, describe(galaxy)));
-        GalaxyLayout.planetInCell(level.getSeed(), GalaxyLayout.cellOf(pos.x), GalaxyLayout.cellOf(pos.z))
+        GalaxyLayout.planetsInCell(level.getSeed(), GalaxyLayout.cellOf(pos.x), GalaxyLayout.cellOf(pos.z))
+                .stream()
+                .min(java.util.Comparator.comparingDouble(p -> p.gravityField().distanceToSurface(pos)))
                 .ifPresent(planet -> text.append(String.format(
-                        " Nearest planet: %s %s, %s %.0f, gravity %.2f, center %.1f %.1f %.1f.",
+                        " Nearest planet: %s %s, %s %.1f, gravity %.2f%s, center %.1f %.1f %.1f.",
                         planet.theme().displayName(), planet.shape().getSerializedName(),
                         planet.shape().getSerializedName().equals("cube") ? "half size" : "radius",
-                        planet.radius(), planet.strength(),
+                        planet.radius(), planet.strength(), planet.caves() ? ", has caves" : "",
                         planet.center().x, planet.center().y, planet.center().z)));
         ctx.getSource().sendSuccess(() -> Component.literal(text.toString()), false);
         return 1;

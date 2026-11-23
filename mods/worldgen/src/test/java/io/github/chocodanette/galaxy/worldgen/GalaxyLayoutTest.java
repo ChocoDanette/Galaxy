@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,7 @@ class GalaxyLayoutTest {
         List<Planet> planets = new ArrayList<>();
         for (int cx = middle - reach; cx <= middle + reach; cx++) {
             for (int cz = -reach; cz <= reach; cz++) {
-                GalaxyLayout.planetInCell(seed, cx, cz).ifPresent(planets::add);
+                planets.addAll(GalaxyLayout.planetsInCell(seed, cx, cz));
             }
         }
         return planets;
@@ -82,8 +81,8 @@ class GalaxyLayoutTest {
     @Test
     void nothingBetweenGalaxies() {
         int between = GalaxyLayout.cellOf(Galaxy.SPACING * 1.5);
-        assertEquals(Optional.empty(), GalaxyLayout.planetInCell(SEED, between, 0));
-        assertEquals(Optional.empty(), GalaxyLayout.planetInCell(SEED, 0, 0));
+        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, between, 0));
+        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, 0, 0));
     }
 
     @Test

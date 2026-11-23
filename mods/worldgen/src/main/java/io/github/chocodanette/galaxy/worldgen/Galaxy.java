@@ -16,9 +16,12 @@ import java.util.SplittableRandom;
  * @param favorites   kinds of planets that are common here; the others are rare
  * @param sizeBias    from -1 (mostly small planets) to 1 (mostly big ones)
  * @param cubeChance  share of planets that are cubes
+ * @param hollowChance  share of spots that hold a hollow planet
+ * @param gatewayChance share of spots that hold two planets joined by tiny gateway planets
  */
 public record Galaxy(int number, long seed, int centerX, int radius, double density,
-                     List<PlanetTheme> favorites, double sizeBias, double cubeChance) {
+                     List<PlanetTheme> favorites, double sizeBias, double cubeChance,
+                     double hollowChance, double gatewayChance) {
     /** Distance between the middles of two neighbouring galaxies, so they never touch. */
     public static final int SPACING = 100_000;
     /** Highest galaxy number, to stay inside Minecraft's world border. */
@@ -41,7 +44,10 @@ public record Galaxy(int number, long seed, int centerX, int radius, double dens
         }
         double sizeBias = random.nextDouble() * 2.0 - 1.0;
         double cubeChance = 0.05 + random.nextDouble() * 0.30;
-        return new Galaxy(number, seed, number * SPACING, radius, density, List.of(favorites), sizeBias, cubeChance);
+        double hollowChance = 0.03 + random.nextDouble() * 0.09;
+        double gatewayChance = 0.06 + random.nextDouble() * 0.14;
+        return new Galaxy(number, seed, number * SPACING, radius, density, List.of(favorites), sizeBias, cubeChance,
+                hollowChance, gatewayChance);
     }
 
     /** The galaxy whose area covers this x, or 0 when x is between galaxies' numbers. */

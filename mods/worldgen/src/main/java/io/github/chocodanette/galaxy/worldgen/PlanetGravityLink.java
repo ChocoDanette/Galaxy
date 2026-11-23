@@ -99,10 +99,11 @@ public final class PlanetGravityLink {
         int cellZ = GalaxyLayout.cellOf(pos.z);
         for (int dx = -CELLS_AROUND_PLAYER; dx <= CELLS_AROUND_PLAYER; dx++) {
             for (int dz = -CELLS_AROUND_PLAYER; dz <= CELLS_AROUND_PLAYER; dz++) {
-                var planet = GalaxyLayout.planetInCell(seed, cellX + dx, cellZ + dz);
-                if (planet.isPresent() && known.add(planet.get().center())) {
-                    data.add(planet.get().gravityField());
-                    added = true;
+                for (Planet planet : GalaxyLayout.planetsInCell(seed, cellX + dx, cellZ + dz)) {
+                    if (known.add(planet.center())) {
+                        data.add(planet.gravityField());
+                        added = true;
+                    }
                 }
             }
         }
