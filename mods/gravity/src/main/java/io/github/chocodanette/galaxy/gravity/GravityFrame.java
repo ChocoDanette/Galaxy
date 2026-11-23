@@ -86,6 +86,29 @@ public final class GravityFrame {
         rotation.premul(turn).normalize();
     }
 
+    /**
+     * Once the frame is back upright, it can still carry a turn around "up" picked up on the
+     * way (walking over a few edges, or round a corner). While tilted that turn is part of
+     * the view, but upright the game ignores the frame, so the view would jump sideways by
+     * that much. This removes the turn from the frame and returns it as a change of yaw, in
+     * degrees, so the caller can add it to the entity's yaw and the view stays where it was.
+     * Returns 0 when there is nothing to remove.
+     */
+    public float settleTwist() {
+        if (isTilted()) {
+            return 0.0F;
+        }
+        Vector3f forward = rotation.transform(new Vector3f(0, 0, 1));
+        float twist = (float) Math.atan2(forward.x, forward.z);
+        if (Math.abs(twist) < 1.0E-5F) {
+            return 0.0F;
+        }
+        Quaternionf undo = new Quaternionf().rotationY(-twist);
+        rotation.mul(undo).normalize();
+        previous.mul(undo).normalize();
+        return -twist * Mth.RAD_TO_DEG;
+    }
+
     public double takeoffDistance() {
         return takeoffDistance;
     }

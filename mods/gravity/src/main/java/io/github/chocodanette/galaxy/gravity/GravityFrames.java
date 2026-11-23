@@ -99,6 +99,10 @@ public final class GravityFrames {
         frame.setGravityDown(up.scale(-1));
         Direction axisBefore = boxAxis(frame);
         frame.tick(up);
+        float yawChange = frame.settleTwist();
+        if (yawChange != 0.0F && entity.isLocalInstanceAuthoritative()) {
+            turnYaw(entity, yawChange);
+        }
         afterTurn(entity, axisBefore);
         if (tilted(entity) != null) {
             // Vanilla measures falls along world "down", which is wrong on a planet's side.
@@ -129,6 +133,16 @@ public final class GravityFrames {
             return !state.isAir() && !state.getCollisionShape(level, cursor).isEmpty();
         };
         return GroundGravity.upAt(solidity, entity.position(), frame.up(), planetUp).orElse(planetUp);
+    }
+
+    /** Turns the entity's yaw (view, head and body) by some degrees, with no smoothing jump. */
+    private static void turnYaw(LivingEntity entity, float degrees) {
+        entity.setYRot(entity.getYRot() + degrees);
+        entity.yRotO += degrees;
+        entity.setYHeadRot(entity.getYHeadRot() + degrees);
+        entity.yHeadRotO += degrees;
+        entity.yBodyRot += degrees;
+        entity.yBodyRotO += degrees;
     }
 
     /** Call after a frame turned: rebuilds the hitbox if it now stands along another axis. */
