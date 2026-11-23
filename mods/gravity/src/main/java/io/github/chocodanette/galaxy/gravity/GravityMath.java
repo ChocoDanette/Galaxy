@@ -3,6 +3,7 @@ package io.github.chocodanette.galaxy.gravity;
 import java.util.Collection;
 import java.util.Optional;
 
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
 /** Pure math for planet gravity, kept free of game state so it can be unit tested. */
@@ -54,5 +55,35 @@ public final class GravityMath {
         return governingField(fields, pos)
                 .map(field -> downDirection(field, pos, VANILLA_DOWN))
                 .orElse(VANILLA_DOWN);
+    }
+
+    /**
+     * How much closer a new face must be before gravity switches to it. Without this,
+     * standing near the edge between two faces would flip gravity back and forth.
+     */
+    public static final double SWITCH_MARGIN = 0.15;
+
+    /**
+     * The axis direction closest to a "down" vector, staying on the current direction
+     * unless another one is clearly closer (by {@link #SWITCH_MARGIN}).
+     */
+    public static Direction nearestDirection(Vec3 down, Direction current) {
+        Direction best = Direction.DOWN;
+        double bestDot = -Double.MAX_VALUE;
+        for (Direction direction : Direction.values()) {
+            double dot = dot(down, direction);
+            if (dot > bestDot) {
+                bestDot = dot;
+                best = direction;
+            }
+        }
+        if (current != null && best != current && bestDot - dot(down, current) < SWITCH_MARGIN) {
+            return current;
+        }
+        return best;
+    }
+
+    private static double dot(Vec3 v, Direction direction) {
+        return v.x * direction.getStepX() + v.y * direction.getStepY() + v.z * direction.getStepZ();
     }
 }

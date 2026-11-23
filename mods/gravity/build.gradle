@@ -1,6 +1,19 @@
 // Shared setup lives in the root build.gradle.
+repositories {
+    // CurseMaven serves CurseForge files as Maven dependencies.
+    maven {
+        url = 'https://cursemaven.com'
+        content {
+            includeGroup 'curse.maven'
+        }
+    }
+}
+
 dependencies {
     implementation project(':core')
+    // Gravity Changer Reforged (MIT): turns hitbox, movement and camera for a gravity direction.
+    // https://www.curseforge.com/minecraft/mc-mods/gravity-changer-reforged, file 9208504 = 1.4.0 for NeoForge 26.3
+    implementation "curse.maven:gravity-changer-reforged-1748487:${gravity_changer_file_id}"
 }
 
 neoForge {

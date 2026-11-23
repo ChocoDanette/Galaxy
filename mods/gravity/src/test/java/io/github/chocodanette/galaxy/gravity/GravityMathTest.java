@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
 class GravityMathTest {
@@ -55,5 +56,22 @@ class GravityMathTest {
         assertThrows(IllegalArgumentException.class, () -> new GravityField(Vec3.ZERO, 0, 10, 1));
         assertThrows(IllegalArgumentException.class, () -> new GravityField(Vec3.ZERO, 20, 10, 1));
         assertThrows(IllegalArgumentException.class, () -> new GravityField(Vec3.ZERO, 20, 30, -1));
+    }
+
+    @Test
+    void snapsToNearestFace() {
+        assertEquals(Direction.DOWN, GravityMath.nearestDirection(new Vec3(0.1, -0.9, 0), Direction.DOWN));
+        assertEquals(Direction.EAST, GravityMath.nearestDirection(new Vec3(0.95, 0.1, 0), Direction.DOWN));
+        assertEquals(Direction.UP, GravityMath.nearestDirection(new Vec3(0, 1, 0), Direction.DOWN));
+    }
+
+    @Test
+    void keepsCurrentFaceNearAnEdge() {
+        // Just past 45 degrees between down and east: not enough to switch away from down.
+        Vec3 nearEdge = new Vec3(0.72, -0.69, 0).normalize();
+        assertEquals(Direction.DOWN, GravityMath.nearestDirection(nearEdge, Direction.DOWN));
+        assertEquals(Direction.EAST, GravityMath.nearestDirection(nearEdge, Direction.EAST));
+        // Clearly closer to east: switch.
+        assertEquals(Direction.EAST, GravityMath.nearestDirection(new Vec3(0.9, -0.4, 0).normalize(), Direction.DOWN));
     }
 }

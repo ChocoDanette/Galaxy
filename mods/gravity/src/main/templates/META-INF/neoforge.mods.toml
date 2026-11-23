@@ -27,3 +27,10 @@ description='''${mod_description}'''
     versionRange="[0.1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="gravity_changer_q"
+    type="required"
+    versionRange="[1.4.0,)"
+    ordering="AFTER"
+    side="BOTH"

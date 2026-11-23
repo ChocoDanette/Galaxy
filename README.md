@@ -37,6 +37,7 @@ Run one mod in a dev client or server:
 
 1. In CurseForge, create a custom profile for Minecraft 26.3 with NeoForge 26.3.0.115 or newer.
 2. Build, then copy the jar of the mod you are testing **and `galaxy_core`** into the profile's `mods` folder.
+   Galaxy Gravity also needs [Gravity Changer Reforged](https://www.curseforge.com/minecraft/mc-mods/gravity-changer-reforged) 1.4.0 or newer for NeoForge 26.3, on both the client and the server.
 3. To test multiplayer, run `./gradlew :<mod>:runServer` and join `localhost` from the instance, or put the same jars on a dedicated server.
 
 ## Trying planet gravity
@@ -51,7 +52,7 @@ This adds a planet centered 20 blocks below you, with a surface radius of 15 blo
 
 Other commands: `/galaxy planet list`, `/galaxy planet remove <number>`, `/galaxy planet clear`.
 
-What works so far: planets are saved with the world, sent to every player, and pull players and mobs toward the nearest planet in multiplayer too. Not yet: your view and walking directions don't turn with the planet, so standing on a planet's side or underside feels like leaning on a wall or ceiling.
+What works so far: planets are saved with the world and sent to every player. Inside a planet's range, gravity points to the planet face you are closest to (up, down or one of the four sides), and [Gravity Changer Reforged](https://www.curseforge.com/minecraft/mc-mods/gravity-changer-reforged) turns your view, walking and hitbox to match. Gravity only switches faces once you are clearly past an edge, so it doesn't flicker. Planets made of blocks with flat faces (cube-like or rounded cubes) feel best.
 
 ## Adding a new mod
 
