@@ -14,8 +14,11 @@
   "client": [
     "client.CameraMixin",
     "client.ClientLevelMixin",
+    "client.FreeParticleMixin",
+    "client.ItemEntityRendererMixin",
     "client.LevelExtractorMixin",
     "client.LocalPlayerMixin",
+    "client.ParticleMixin",
     "client.SkyRendererMixin"
   ],
   "injectors": {
