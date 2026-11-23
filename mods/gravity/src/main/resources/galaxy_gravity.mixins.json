@@ -11,8 +11,10 @@
   ],
   "client": [
     "client.CameraMixin",
+    "client.ClientLevelMixin",
     "client.LevelExtractorMixin",
-    "client.LocalPlayerMixin"
+    "client.LocalPlayerMixin",
+    "client.SkyRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
