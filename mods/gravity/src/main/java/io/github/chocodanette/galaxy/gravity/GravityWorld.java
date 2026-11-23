@@ -12,9 +12,15 @@ import net.minecraft.world.phys.Vec3;
  * @param spacePull outside every field, things drift toward the nearest planet with this
  *                  share of its pull (0 = off, so vanilla gravity applies there)
  * @param anchors   centers of planets that pull harder from space (each galaxy's home planet)
+ * @param mode      how players and mobs decide which way is down on a planet
  */
-public record GravityWorld(List<GravityField> fields, double spacePull, List<Vec3> anchors) {
+public record GravityWorld(List<GravityField> fields, double spacePull, List<Vec3> anchors, GravityMode mode) {
     public static final GravityWorld EMPTY = new GravityWorld(List.of(), 0.0, List.of());
+
+    /** With the default mode (down follows the ground). */
+    public GravityWorld(List<GravityField> fields, double spacePull, List<Vec3> anchors) {
+        this(fields, spacePull, anchors, GravityMode.GROUND);
+    }
 
     public GravityWorld {
         fields = List.copyOf(fields);

@@ -31,6 +31,24 @@ public final class GravityFrame {
      * toward a planet.
      */
     private boolean free;
+    /** The way gravity pulls this entity, as picked by the last frame update (null = unknown). */
+    private Vec3 gravityDown;
+    /** Ticks since the entity last stood on something. */
+    private int ticksOffGround = 1000;
+
+    public Vec3 gravityDown() {
+        return gravityDown;
+    }
+
+    public void setGravityDown(Vec3 down) {
+        gravityDown = down;
+    }
+
+    /** Counts up while in the air, back to 0 on landing. Returns the new count. */
+    public int updateGround(boolean onGround) {
+        ticksOffGround = onGround ? 0 : Math.min(ticksOffGround + 1, 1000);
+        return ticksOffGround;
+    }
 
     public boolean isFree() {
         return free;

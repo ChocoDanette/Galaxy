@@ -65,6 +65,10 @@ public final class GravityApplier {
                 scale = field.strength() * GravityMath.pullFactor(field, entity.position(), anyFrame.takeoffDistance());
             }
         }
+        if (anyFrame != null && anyFrame.gravityDown() != null && pull.get().inField()) {
+            // Living things are pulled the way their frame update picked (into the ground).
+            down = anyFrame.gravityDown();
+        }
         GravityFrame frame = GravityFrames.tilted(entity);
         if (frame != null && entity.onGround()) {
             // Standing on a surface, pull straight into the block face you stand on. The true

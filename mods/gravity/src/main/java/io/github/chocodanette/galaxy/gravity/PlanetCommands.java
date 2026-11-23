@@ -27,6 +27,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * /galaxy planet clear
  * /galaxy planet centers show|hide   (glowing marker at each gravity center)
  * /galaxy planet ranges show|hide    (light blue bubble showing how far gravity reaches)
+ * /galaxy planet mode ground|center  (down follows the ground, or points at the planet's center)
  * </pre>
  */
 public final class PlanetCommands {
@@ -65,7 +66,10 @@ public final class PlanetCommands {
                                 .then(Commands.literal("hide").executes(ctx -> showCenters(ctx, false))))
                         .then(Commands.literal("ranges")
                                 .then(Commands.literal("show").executes(ctx -> showRanges(ctx, true)))
-                                .then(Commands.literal("hide").executes(ctx -> showRanges(ctx, false))))));
+                                .then(Commands.literal("hide").executes(ctx -> showRanges(ctx, false))))
+                        .then(Commands.literal("mode")
+                                .then(Commands.literal("ground").executes(ctx -> setMode(ctx, GravityMode.GROUND)))
+                                .then(Commands.literal("center").executes(ctx -> setMode(ctx, GravityMode.CENTER))))));
     }
 
     private static int add(CommandContext<CommandSourceStack> ctx, double strength) {
@@ -184,6 +188,16 @@ public final class PlanetCommands {
         ctx.getSource().sendSuccess(() -> Component.literal(show
                 ? "Showing each planet's gravity range as a blue bubble"
                 : "Hiding gravity ranges"), true);
+        return 1;
+    }
+
+    private static int setMode(CommandContext<CommandSourceStack> ctx, GravityMode mode) {
+        ServerLevel level = ctx.getSource().getLevel();
+        PlanetGravityData.get(level).setMode(mode);
+        PlanetSync.sendToDimension(level);
+        ctx.getSource().sendSuccess(() -> Component.literal(mode == GravityMode.GROUND
+                ? "Gravity in this dimension now follows the ground under your feet"
+                : "Gravity in this dimension now pulls toward each planet's center"), true);
         return 1;
     }
 }

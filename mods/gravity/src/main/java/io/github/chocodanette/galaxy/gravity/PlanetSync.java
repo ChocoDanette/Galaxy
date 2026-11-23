@@ -21,11 +21,11 @@ public final class PlanetSync {
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar(GalaxyGravity.MODID).versioned("5");
+        var registrar = event.registrar(GalaxyGravity.MODID).versioned("6");
         registrar.playToClient(
                 SyncPlanetsPayload.TYPE,
                 SyncPlanetsPayload.STREAM_CODEC,
-                (payload, context) -> ClientPlanets.set(new GravityWorld(payload.fields(), payload.spacePull(), payload.anchors()), payload.showRanges()));
+                (payload, context) -> ClientPlanets.set(new GravityWorld(payload.fields(), payload.spacePull(), payload.anchors(), payload.mode()), payload.showRanges()));
         registrar.playToServer(
                 FlightFramePayload.TYPE,
                 FlightFramePayload.STREAM_CODEC,

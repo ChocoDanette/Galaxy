@@ -23,12 +23,13 @@ public final class PlanetGravityData extends SavedData {
             Codec.BOOL.optionalFieldOf("show_centers", true).forGetter(data -> data.showCenters),
             Codec.BOOL.optionalFieldOf("show_ranges", true).forGetter(data -> data.showRanges),
             Codec.DOUBLE.optionalFieldOf("space_pull", 0.0).forGetter(data -> data.spacePull),
-            Vec3.CODEC.listOf().optionalFieldOf("anchors", List.of()).forGetter(data -> data.anchors)
+            Vec3.CODEC.listOf().optionalFieldOf("anchors", List.of()).forGetter(data -> data.anchors),
+            GravityMode.CODEC.optionalFieldOf("mode", GravityMode.GROUND).forGetter(data -> data.mode)
     ).apply(i, PlanetGravityData::new));
 
     /** Reads saves from before center markers (a plain list of planets) as well. */
     public static final Codec<PlanetGravityData> CODEC = Codec.either(FULL_CODEC, GravityField.CODEC.listOf())
-            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true, true, 0.0, List.of())), Either::left);
+            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true, true, 0.0, List.of(), GravityMode.GROUND)), Either::left);
 
     public static final SavedDataType<PlanetGravityData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(GalaxyGravity.MODID, "planets"),
@@ -39,13 +40,15 @@ public final class PlanetGravityData extends SavedData {
     private boolean showRanges;
     private double spacePull;
     private final List<Vec3> anchors;
+    private GravityMode mode;
 
     public PlanetGravityData() {
-        this(List.of(), true, true, 0.0, List.of());
+        this(List.of(), true, true, 0.0, List.of(), GravityMode.GROUND);
     }
 
     private PlanetGravityData(List<GravityField> fields, boolean showCenters, boolean showRanges,
-            double spacePull, List<Vec3> anchors) {
+            double spacePull, List<Vec3> anchors, GravityMode mode) {
+        this.mode = mode;
         this.spacePull = spacePull;
         this.anchors = new ArrayList<>(anchors);
         this.fields = new ArrayList<>(fields);
@@ -98,7 +101,7 @@ public final class PlanetGravityData extends SavedData {
 
     /** This dimension's planets and space pull, ready for the gravity math. */
     public GravityWorld world() {
-        return new GravityWorld(fields, spacePull, anchors);
+        return new GravityWorld(fields, spacePull, anchors, mode);
     }
 
     /**
@@ -110,6 +113,15 @@ public final class PlanetGravityData extends SavedData {
             spacePull = pull;
             setDirty();
         }
+    }
+
+    public GravityMode mode() {
+        return mode;
+    }
+
+    public void setMode(GravityMode mode) {
+        this.mode = mode;
+        setDirty();
     }
 
     public double spacePull() {
