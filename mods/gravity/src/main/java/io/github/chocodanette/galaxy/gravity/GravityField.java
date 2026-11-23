@@ -1,6 +1,13 @@
 package io.github.chocodanette.galaxy.gravity;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.phys.Vec3;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * A spherical gravity field around one planet.
@@ -11,6 +18,22 @@ import net.minecraft.world.phys.Vec3;
  * @param strength pull compared to vanilla gravity (1.0 = normal)
  */
 public record GravityField(Vec3 center, double radius, double range, double strength) {
+    /** How a field is written into the world save. */
+    public static final Codec<GravityField> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Vec3.CODEC.fieldOf("center").forGetter(GravityField::center),
+            Codec.DOUBLE.fieldOf("radius").forGetter(GravityField::radius),
+            Codec.DOUBLE.fieldOf("range").forGetter(GravityField::range),
+            Codec.DOUBLE.fieldOf("strength").forGetter(GravityField::strength)
+    ).apply(i, GravityField::new));
+
+    /** How a field is sent from the server to players. */
+    public static final StreamCodec<ByteBuf, GravityField> STREAM_CODEC = StreamCodec.composite(
+            Vec3.STREAM_CODEC, GravityField::center,
+            ByteBufCodecs.DOUBLE, GravityField::radius,
+            ByteBufCodecs.DOUBLE, GravityField::range,
+            ByteBufCodecs.DOUBLE, GravityField::strength,
+            GravityField::new);
+
     public GravityField {
         if (radius <= 0) {
             throw new IllegalArgumentException("radius must be positive");

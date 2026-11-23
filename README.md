@@ -39,6 +39,20 @@ Run one mod in a dev client or server:
 2. Build, then copy the jar of the mod you are testing **and `galaxy_core`** into the profile's `mods` folder.
 3. To test multiplayer, run `./gradlew :<mod>:runServer` and join `localhost` from the instance, or put the same jars on a dedicated server.
 
+## Trying planet gravity
+
+Gravity has test commands until galaxy generation places planets by itself. In a world with cheats on:
+
+```
+/galaxy planet add ~ ~-20 ~ 15 45
+```
+
+This adds a planet centered 20 blocks below you, with a surface radius of 15 blocks, pulling anything within 45 blocks of its center. Build a ball of blocks there (radius 15) to stand on. An optional last number sets the strength (1 = normal gravity).
+
+Other commands: `/galaxy planet list`, `/galaxy planet remove <number>`, `/galaxy planet clear`.
+
+What works so far: planets are saved with the world, sent to every player, and pull players and mobs toward the nearest planet in multiplayer too. Not yet: your view and walking directions don't turn with the planet, so standing on a planet's side or underside feels like leaning on a wall or ceiling.
+
 ## Adding a new mod
 
 1. Copy `mods/gravity` to `mods/<name>` and change `gradle.properties` (`mod_id`, `mod_name`, `mod_version`, `mod_description`).
