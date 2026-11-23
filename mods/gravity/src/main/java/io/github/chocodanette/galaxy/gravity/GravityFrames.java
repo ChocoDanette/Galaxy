@@ -95,6 +95,7 @@ public final class GravityFrames {
             entity.resetFallDistance();
             return;
         }
+        updateLaunch(entity, world, frame);
         Vec3 up = upFor(entity, world, frame);
         frame.setGravityDown(up.scale(-1));
         Direction axisBefore = boxAxis(frame);
@@ -104,9 +105,24 @@ public final class GravityFrames {
             turnYaw(entity, yawChange);
         }
         afterTurn(entity, axisBefore);
-        if (tilted(entity) != null) {
+        if (tilted(entity) != null || frame.isLaunched()) {
             // Vanilla measures falls along world "down", which is wrong on a planet's side.
             entity.resetFallDistance();
+        }
+    }
+
+    /**
+     * Charges the charged jump while crouching on a planet, and ends a charged jump's flight
+     * on landing (or in water, on a ladder, or when flying).
+     */
+    private static void updateLaunch(LivingEntity entity, GravityWorld world, GravityFrame frame) {
+        boolean onPlanet = entity.onGround()
+                && GravityMath.governingField(world.fields(), entity.position()).isPresent();
+        frame.updateCharge(onPlanet && entity.isCrouching());
+        if (frame.isLaunched() && (entity.onGround() || entity.isInLiquid() || entity.onClimbable()
+                || entity.isFallFlying()
+                || entity instanceof net.minecraft.world.entity.player.Player player && player.getAbilities().flying)) {
+            frame.setLaunched(false);
         }
     }
 

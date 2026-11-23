@@ -17,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
 
 import io.github.chocodanette.galaxy.gravity.GravityFrame;
 import io.github.chocodanette.galaxy.gravity.GravityFrames;
+import io.github.chocodanette.galaxy.gravity.Launch;
 
 /**
  * Air and ground movement, friction and jumping in the entity's own frame. Vanilla applies
@@ -56,7 +57,12 @@ public abstract class LivingEntityMixin {
         LivingEntity self = galaxy$self();
         GravityFrame frame = GravityFrames.tilted(self);
         if (frame == null) {
-            return;
+            GravityFrame any = GravityFrames.of(self);
+            if (any == null || !any.isLaunched()) {
+                return;
+            }
+            // Upright but flying after a charged jump: still use the low drag below.
+            frame = any;
         }
         ci.cancel();
 
@@ -81,8 +87,41 @@ public abstract class LivingEntityMixin {
         float airDrag = computeModifiedFriction(0.91F, airDragModifier);
         float friction = blockFriction * airDrag;
         float verticalFriction = computeModifiedFriction(0.98F, airDragModifier);
+        if (frame.isLaunched()) {
+            // After a charged jump the air barely slows you, so you can coast between planets.
+            self.setDeltaMovement(movement.scale(Launch.DRAG));
+            return;
+        }
         Vec3 local = frame.toLocal(movement);
         self.setDeltaMovement(frame.toWorld(new Vec3(local.x * friction, local.y * verticalFriction, local.z * friction)));
+    }
+
+    /**
+     * After crouching on a planet, a jump becomes a hop or a launch toward where you look
+     * (see {@link Launch}). Returns true when it did.
+     */
+    @Unique
+    private static boolean galaxy$chargedJump(LivingEntity self) {
+        GravityFrame frame = GravityFrames.of(self);
+        if (frame == null || frame.isFree()) {
+            return false;
+        }
+        Launch.Kind kind = Launch.kindFor(frame.chargeTicks());
+        if (kind == Launch.Kind.NONE) {
+            return false;
+        }
+        Vec3 direction = Launch.direction(self.getViewVector(1.0F), frame.up());
+        self.setDeltaMovement(direction.scale(Launch.speedFor(kind)));
+        frame.setLaunched(true);
+        frame.updateCharge(false);
+        self.needsSync = true;
+        if (self.level().isClientSide()) {
+            self.playSound(kind == Launch.Kind.LAUNCH
+                    ? net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_LAUNCH
+                    : net.minecraft.sounds.SoundEvents.BREEZE_JUMP, 1.0F, 1.0F);
+        }
+        net.neoforged.neoforge.common.CommonHooks.onLivingJump(self);
+        return true;
     }
 
     /**
@@ -103,6 +142,10 @@ public abstract class LivingEntityMixin {
     @Inject(method = "jumpFromGround", at = @At("HEAD"), cancellable = true)
     private void galaxy$jump(CallbackInfo ci) {
         LivingEntity self = galaxy$self();
+        if (galaxy$chargedJump(self)) {
+            ci.cancel();
+            return;
+        }
         GravityFrame frame = GravityFrames.tilted(self);
         if (frame == null) {
             return;
