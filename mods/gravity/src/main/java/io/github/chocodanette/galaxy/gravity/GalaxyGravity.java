@@ -14,7 +14,9 @@ import net.neoforged.fml.common.Mod;
  * Plan for this mod, in order:
  * 1. Gravity fields and the math that picks the pull at a position. Done.
  * 2. Planets saved per dimension, synced to players, pulling entities toward their center. Done.
- * 3. Movement, hitbox and camera that turn with the local "down". Next.
+ * 3. Our own round gravity: each entity's frame tilts gradually toward its planet, and
+ *    movement, jumping, aim, eyes, hitbox and camera follow it (see GravityFrame and mixin/). Done.
+ * 4. Drawing other players and mobs tilted. Next.
  */
 @Mod(GalaxyGravity.MODID)
 public final class GalaxyGravity {
@@ -23,6 +25,7 @@ public final class GalaxyGravity {
 
     public GalaxyGravity(IEventBus modEventBus, ModContainer modContainer) {
         PlanetSync.register(modEventBus);
+        GravityFrames.register(modEventBus);
         GravityApplier.register();
         PlanetCommands.register();
         LOGGER.info("Galaxy Gravity loaded");

@@ -51,7 +51,14 @@ This adds a planet centered 20 blocks below you, with a surface radius of 15 blo
 
 Other commands: `/galaxy planet list`, `/galaxy planet remove <number>`, `/galaxy planet clear`.
 
-What works so far: planets are saved with the world, sent to every player, and pull players and mobs toward the nearest planet in multiplayer too. Not yet: your view and walking directions don't turn with the planet, so standing on a planet's side or underside feels like leaning on a wall or ceiling.
+What works so far (our own gravity, no other mods needed):
+
+- Planets are saved with the world and sent to every player.
+- Each player and mob has its own "up", which turns gradually (about half a second for a quarter turn) toward the planet's center, so the view tilts smoothly as you walk around a round planet.
+- Walking, jumping, friction, aiming (breaking blocks, attacking) and the camera all follow that tilted "up". Other players and mobs are drawn tilted too.
+- You can stand and walk on any side of a planet, including underneath.
+
+Known limits: hitboxes must stay box-shaped along the world axes, so a player's hitbox lies along the nearest axis (for example sideways on a planet's east side). Auto step-up onto blocks and sneaking at edges only work on top of planets for now. There's no fall damage while tilted.
 
 ## Adding a new mod
 
