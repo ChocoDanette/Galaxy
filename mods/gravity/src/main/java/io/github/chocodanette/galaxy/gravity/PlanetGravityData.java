@@ -19,12 +19,13 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 public final class PlanetGravityData extends SavedData {
     private static final Codec<PlanetGravityData> FULL_CODEC = RecordCodecBuilder.create(i -> i.group(
             GravityField.CODEC.listOf().fieldOf("planets").forGetter(data -> data.fields),
-            Codec.BOOL.optionalFieldOf("show_centers", true).forGetter(data -> data.showCenters)
+            Codec.BOOL.optionalFieldOf("show_centers", true).forGetter(data -> data.showCenters),
+            Codec.BOOL.optionalFieldOf("show_ranges", true).forGetter(data -> data.showRanges)
     ).apply(i, PlanetGravityData::new));
 
     /** Reads saves from before center markers (a plain list of planets) as well. */
     public static final Codec<PlanetGravityData> CODEC = Codec.either(FULL_CODEC, GravityField.CODEC.listOf())
-            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true)), Either::left);
+            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true, true)), Either::left);
 
     public static final SavedDataType<PlanetGravityData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(GalaxyGravity.MODID, "planets"),
@@ -32,14 +33,16 @@ public final class PlanetGravityData extends SavedData {
 
     private final List<GravityField> fields;
     private boolean showCenters;
+    private boolean showRanges;
 
     public PlanetGravityData() {
-        this(List.of(), true);
+        this(List.of(), true, true);
     }
 
-    private PlanetGravityData(List<GravityField> fields, boolean showCenters) {
+    private PlanetGravityData(List<GravityField> fields, boolean showCenters, boolean showRanges) {
         this.fields = new ArrayList<>(fields);
         this.showCenters = showCenters;
+        this.showRanges = showRanges;
     }
 
     public static PlanetGravityData get(ServerLevel level) {
@@ -72,6 +75,16 @@ public final class PlanetGravityData extends SavedData {
 
     public void setShowCenters(boolean show) {
         showCenters = show;
+        setDirty();
+    }
+
+    /** Whether players see a light blue bubble showing how far each planet's gravity reaches. */
+    public boolean showRanges() {
+        return showRanges;
+    }
+
+    public void setShowRanges(boolean show) {
+        showRanges = show;
         setDirty();
     }
 

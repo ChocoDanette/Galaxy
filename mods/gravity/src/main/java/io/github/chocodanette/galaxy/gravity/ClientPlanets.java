@@ -8,6 +8,7 @@ import java.util.List;
  */
 public final class ClientPlanets {
     private static volatile List<GravityField> fields = List.of();
+    private static volatile boolean showRanges = true;
 
     private ClientPlanets() {
     }
@@ -16,7 +17,13 @@ public final class ClientPlanets {
         return fields;
     }
 
-    static void set(List<GravityField> newFields) {
+    /** Whether the server wants the blue gravity range bubbles drawn. */
+    public static boolean showRanges() {
+        return showRanges;
+    }
+
+    static void set(List<GravityField> newFields, boolean newShowRanges) {
         fields = List.copyOf(newFields);
+        showRanges = newShowRanges;
     }
 }

@@ -21,19 +21,19 @@ public final class PlanetSync {
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar(GalaxyGravity.MODID).versioned("1").playToClient(
+        event.registrar(GalaxyGravity.MODID).versioned("2").playToClient(
                 SyncPlanetsPayload.TYPE,
                 SyncPlanetsPayload.STREAM_CODEC,
-                (payload, context) -> ClientPlanets.set(payload.fields()));
+                (payload, context) -> ClientPlanets.set(payload.fields(), payload.showRanges()));
     }
 
     /** Sends the planets of a dimension to everyone in it. Call after any change. */
     public static void sendToDimension(ServerLevel level) {
-        PacketDistributor.sendToPlayersInDimension(level, new SyncPlanetsPayload(PlanetGravityData.get(level).fields()));
+        PacketDistributor.sendToPlayersInDimension(level, SyncPlanetsPayload.of(PlanetGravityData.get(level)));
     }
 
     private static void sendTo(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(player, new SyncPlanetsPayload(PlanetGravityData.get(player.level()).fields()));
+        PacketDistributor.sendToPlayer(player, SyncPlanetsPayload.of(PlanetGravityData.get(player.level())));
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {

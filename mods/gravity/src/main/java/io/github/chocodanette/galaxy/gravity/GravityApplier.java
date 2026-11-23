@@ -53,6 +53,14 @@ public final class GravityApplier {
             gravity.addTransientModifier(CANCEL_VANILLA);
         }
         Vec3 down = GravityMath.downDirection(field.get(), entity.position(), GravityMath.VANILLA_DOWN);
+        double takeoff = Double.NaN;
+        GravityFrame anyFrame = GravityFrames.of(entity);
+        if (anyFrame != null) {
+            if (entity.onGround() || entity.isInLiquid() || entity.onClimbable()) {
+                anyFrame.setTakeoffDistance(field.get().distanceToSurface(entity.position()));
+            }
+            takeoff = anyFrame.takeoffDistance();
+        }
         GravityFrame frame = GravityFrames.tilted(entity);
         if (frame != null && entity.onGround()) {
             // Standing on a surface, pull straight into the block face you stand on. The true
@@ -60,7 +68,8 @@ public final class GravityApplier {
             // part would make you slide slowly toward the middle of the face.
             down = GravityFrames.boxAxis(frame).getUnitVec3().scale(-1);
         }
-        double pull = gravity.getBaseValue() * field.get().strength();
+        double pull = gravity.getBaseValue() * field.get().strength()
+                * GravityMath.pullFactor(field.get(), entity.position(), takeoff);
         entity.setDeltaMovement(entity.getDeltaMovement().add(down.scale(pull)));
     }
 
