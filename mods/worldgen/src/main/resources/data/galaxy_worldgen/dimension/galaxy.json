@@ -1,0 +1,7 @@
+{
+  "type": "galaxy_worldgen:galaxy",
+  "generator": {
+    "type": "galaxy_worldgen:planets",
+    "biome": "galaxy_worldgen:space"
+  }
+}

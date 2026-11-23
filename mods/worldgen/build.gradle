@@ -1,0 +1,26 @@
+// Shared setup lives in the root build.gradle.
+dependencies {
+    implementation project(':core')
+    implementation project(':gravity')
+}
+
+neoForge {
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+        // Load Core and Gravity alongside Galaxy Generation in dev runs.
+        "galaxy_core" {
+            sourceSet(project(':core').sourceSets.main)
+        }
+        "galaxy_gravity" {
+            sourceSet(project(':gravity').sourceSets.main)
+        }
+    }
+
+    // Puts Minecraft and NeoForge on the unit test classpath.
+    unitTest {
+        enable()
+        testedMod = mods."${mod_id}"
+    }
+}
