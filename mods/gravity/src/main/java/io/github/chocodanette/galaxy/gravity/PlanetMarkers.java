@@ -50,11 +50,13 @@ public final class PlanetMarkers {
                     switch (field.shape()) {
                         case CUBE -> 0x55FFFF;
                         case HOLLOW -> 0x55FF55;
+                        case ROUNDED_CUBE -> 0xFF55FF;
                         default -> 0xFFAA00;
                     },
                     switch (field.shape()) {
                         case CUBE -> "diamond_block";
                         case HOLLOW -> "emerald_block";
+                        case ROUNDED_CUBE -> "amethyst_block";
                         default -> "gold_block";
                     },
                     -half, -half, -half, SIZE, SIZE, SIZE);

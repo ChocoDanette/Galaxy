@@ -45,7 +45,9 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
 
     /** Farthest a block of this planet's ground can be from its center along any axis. */
     public double extent() {
-        return shape == GravityField.Shape.SPHERE ? radius * (1.0 + bumpiness) : radius;
+        return shape == GravityField.Shape.SPHERE || shape == GravityField.Shape.ROUNDED_CUBE
+                ? radius * (1.0 + bumpiness)
+                : radius;
     }
 
     /** Farthest anything of this planet reaches, trees included. */
@@ -86,6 +88,35 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             double far = Math.max(ax, Math.max(ay, az));
             depth = radius - far;
             onTop = dy > 0 && ay >= ax && ay >= az;
+            inner = Math.min(1.0, depth / radius);
+        } else if (shape == GravityField.Shape.ROUNDED_CUBE) {
+            // Distance from a smaller, sharp cube inside: the faces are flat and the edges round.
+            double bevel = GravityField.roundedBevel(radius);
+            double core = radius - bevel;
+            double qx = clamp(dx, core);
+            double qy = clamp(dy, core);
+            double qz = clamp(dz, core);
+            double ex = dx - qx;
+            double ey = dy - qy;
+            double ez = dz - qz;
+            double out = Math.sqrt(ex * ex + ey * ey + ez * ez);
+            if (out > bevel + bumpiness * radius + 1.0) {
+                return null;
+            }
+            // Hills rise straight out of each face, following the point under them on the inner cube.
+            double surface = bevel;
+            if (bumpiness > 0) {
+                double f = HILL_FREQUENCY / Math.max(radius, 1.0);
+                surface += bumpiness * radius * Hashing.smoothNoise(seed, qx * f, qy * f, qz * f);
+            }
+            if (out > 1.0e-9) {
+                depth = surface - out;
+                onTop = ey / out > TOP_THRESHOLD;
+            } else {
+                double far = Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
+                depth = surface + core - far;
+                onTop = false;
+            }
             inner = Math.min(1.0, depth / radius);
         } else if (shape == GravityField.Shape.HOLLOW) {
             double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
@@ -139,6 +170,10 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         Material rock = inner > 0.7 ? Material.CORE : inner > 0.4 ? Material.DEEP : Material.STONE;
         Material.Ore ore = oreAt(x, y, z, inner);
         return ore == null ? rock : Material.ore(ore, rock != Material.STONE);
+    }
+
+    private static double clamp(double value, double limit) {
+        return Math.max(-limit, Math.min(limit, value));
     }
 
     /** For a hollow planet, the radius of the open space inside. */
@@ -299,7 +334,9 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
     private List<TreeBlock> growTrees() {
         List<Trees.Style> styles = theme.treeStyles();
         boolean hollow = shape == GravityField.Shape.HOLLOW;
-        double outerArea = shape == GravityField.Shape.CUBE ? 24.0 * radius * radius : 4.0 * Math.PI * radius * radius;
+        double outerArea = shape == GravityField.Shape.CUBE || shape == GravityField.Shape.ROUNDED_CUBE
+                ? 24.0 * radius * radius
+                : 4.0 * Math.PI * radius * radius;
         double innerArea = hollow ? 4.0 * Math.PI * innerRadius() * innerRadius() : 0.0;
         int attempts = (int) ((outerArea + innerArea) * theme.treeDensity());
         SplittableRandom random = new SplittableRandom(seed ^ 0x243F6A8885A308D3L);

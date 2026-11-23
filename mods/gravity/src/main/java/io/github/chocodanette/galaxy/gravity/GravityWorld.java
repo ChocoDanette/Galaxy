@@ -17,9 +17,9 @@ import net.minecraft.world.phys.Vec3;
 public record GravityWorld(List<GravityField> fields, double spacePull, List<Vec3> anchors, GravityMode mode) {
     public static final GravityWorld EMPTY = new GravityWorld(List.of(), 0.0, List.of());
 
-    /** With the default mode (down follows the ground). */
+    /** With the default mode (each planet's own pull). */
     public GravityWorld(List<GravityField> fields, double spacePull, List<Vec3> anchors) {
-        this(fields, spacePull, anchors, GravityMode.GROUND);
+        this(fields, spacePull, anchors, GravityMode.CENTER);
     }
 
     public GravityWorld {

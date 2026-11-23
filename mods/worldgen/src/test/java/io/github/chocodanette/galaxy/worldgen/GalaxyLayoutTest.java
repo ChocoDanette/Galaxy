@@ -59,7 +59,7 @@ class GalaxyLayoutTest {
             smallest = Math.min(smallest, p.radius());
             biggest = Math.max(biggest, p.radius());
         }
-        assertEquals(EnumSet.allOf(GravityField.Shape.class), shapes);
+        assertEquals(EnumSet.of(GravityField.Shape.ROUNDED_CUBE, GravityField.Shape.CUBE, GravityField.Shape.HOLLOW), shapes);
         assertTrue(themes.size() >= 4, "themes: " + themes);
         assertTrue(biggest > smallest * 2, "sizes " + smallest + " to " + biggest);
     }
@@ -160,5 +160,27 @@ class GalaxyLayoutTest {
         int chunkMinX = Math.floorDiv(x, 16) * 16;
         int chunkMinZ = Math.floorDiv(z, 16) * 16;
         assertTrue(GalaxyLayout.planetsTouching(SEED, chunkMinX, chunkMinZ, chunkMinX + 15, chunkMinZ + 15).contains(planet));
+    }
+
+    @Test
+    void roundedCubeHasFlatFacesAndRoundEdges() {
+        Planet planet = new Planet(3L, new Vec3(0.5, 100.5, 0.5), 15, GravityField.Shape.ROUNDED_CUBE,
+                PlanetTheme.VERDANT, 0.0, 1.0);
+        double bevel = GravityField.roundedBevel(15);
+        int flat = (int) (15 - bevel) - 1;
+        // The top face is flat across its whole middle part.
+        for (int x = -flat; x <= flat; x++) {
+            for (int z = -flat; z <= flat; z++) {
+                assertEquals(115, planet.topY(x, z), "top at " + x + " " + z);
+            }
+        }
+        // The corner is cut round: the block at the very corner of the bounding box is empty.
+        assertNull(planet.materialAt(14, 114, 14));
+        // On the middle of a face gravity points straight into it.
+        GravityField field = planet.gravityField();
+        Vec3 down = GravityMath.downDirection(List.of(field), new Vec3(3.5, 116.0, -2.5));
+        assertEquals(-1.0, down.y, 1.0e-9);
+        Vec3 side = GravityMath.downDirection(List.of(field), new Vec3(16.0, 101.0, 4.0));
+        assertEquals(-1.0, side.x, 1.0e-9);
     }
 }

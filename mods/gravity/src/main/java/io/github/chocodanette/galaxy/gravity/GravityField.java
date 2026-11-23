@@ -190,7 +190,17 @@ public record GravityField(Vec3 center, double radius, double range, double stre
     }
 
     private double coreHalfSize() {
-        return Math.max(0.0, radius - CUBE_EDGE_ROUNDING);
+        return shape == Shape.ROUNDED_CUBE
+                ? Math.max(0.0, radius - roundedBevel(radius))
+                : Math.max(0.0, radius - CUBE_EDGE_ROUNDING);
+    }
+
+    /**
+     * How round the edges of a rounded cube of this half size are: the radius of the curve
+     * that joins two faces, in blocks. Gravity only turns while you walk over that curve.
+     */
+    public static double roundedBevel(double halfSize) {
+        return Math.max(1.5, Math.min(9.0, Math.round(halfSize * 0.4)));
     }
 
     private static double clamp(double value, double min, double max) {
@@ -201,7 +211,12 @@ public record GravityField(Vec3 center, double radius, double range, double stre
         SPHERE("sphere"),
         CUBE("cube"),
         /** A round shell you can walk on outside and inside, with a tunnel through its poles. */
-        HOLLOW("hollow");
+        HOLLOW("hollow"),
+        /**
+         * A cube with wide rounded edges. On each face down points straight into the face, so
+         * blocks and gravity line up like in the overworld; it only turns on the rounded edges.
+         */
+        ROUNDED_CUBE("rounded_cube");
 
         public static final Codec<Shape> CODEC = StringRepresentable.fromEnum(Shape::values);
         public static final StreamCodec<ByteBuf, Shape> STREAM_CODEC =

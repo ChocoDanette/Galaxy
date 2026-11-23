@@ -19,7 +19,10 @@ public enum GravityMode implements StringRepresentable {
      * to the planet's pull toward its center.
      */
     GROUND("ground"),
-    /** Down always points toward the planet's center (or into a cube's face). */
+    /**
+     * The planet's own pull: toward a sphere's center, straight into a cube's face (turning
+     * only near its edges). The default.
+     */
     CENTER("center");
 
     public static final Codec<GravityMode> CODEC = StringRepresentable.fromEnum(GravityMode::values);

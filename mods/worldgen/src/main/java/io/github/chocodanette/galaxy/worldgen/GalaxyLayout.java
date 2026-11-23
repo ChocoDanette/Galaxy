@@ -30,6 +30,9 @@ public final class GalaxyLayout {
     public static final double MIN_SPHERE_RADIUS = 6.0;
     public static final double MAX_SPHERE_RADIUS = 28.0;
     public static final double MAX_BUMPINESS = 0.15;
+    /** Half size of rounded-cube planets, the usual kind. */
+    public static final double MIN_ROUNDED_HALF = 6.0;
+    public static final double MAX_ROUNDED_HALF = 22.0;
     public static final double MIN_CUBE_HALF = 5.0;
     public static final double MAX_CUBE_HALF = 13.0;
     /** Largest distance from a planet's center to any of its blocks. */
@@ -101,7 +104,7 @@ public final class GalaxyLayout {
         return List.of(singlePlanet(galaxy, random, seed, cellX, cellZ, true));
     }
 
-    /** A plain sphere or cube. */
+    /** A rounded cube (most planets) or a sharp-edged cube. */
     private static Planet singlePlanet(Galaxy galaxy, SplittableRandom random, long seed, int cellX, int cellZ,
             boolean varied) {
         boolean cube = varied && random.nextDouble() < galaxy.cubeChance();
@@ -113,9 +116,9 @@ public final class GalaxyLayout {
             radius = Math.floor(MIN_CUBE_HALF + size * (MAX_CUBE_HALF - MIN_CUBE_HALF + 1)) + 0.5;
             bumpiness = 0.0;
         } else {
-            radius = MIN_SPHERE_RADIUS + size * (MAX_SPHERE_RADIUS - MIN_SPHERE_RADIUS);
-            // Small planets stay rounder so they're still easy to walk around.
-            bumpiness = (0.03 + random.nextDouble() * (MAX_BUMPINESS - 0.03)) * Math.min(1.0, radius / 14.0);
+            radius = MIN_ROUNDED_HALF + size * (MAX_ROUNDED_HALF - MIN_ROUNDED_HALF);
+            // Hills, as a share of the half size; small planets stay smoother.
+            bumpiness = (0.02 + random.nextDouble() * 0.08) * Math.min(1.0, radius / 14.0);
         }
         double extent = cube ? radius : radius * (1.0 + bumpiness);
         double strength = 0.7 + random.nextDouble() * 0.3;
@@ -123,7 +126,7 @@ public final class GalaxyLayout {
         boolean caves = varied && radius >= MIN_CAVE_RADIUS && random.nextDouble() < 0.8;
         Vec3 center = placeInCell(random, cellX, cellZ, extent, extent, extent);
         return new Planet(seed, center, radius,
-                cube ? GravityField.Shape.CUBE : GravityField.Shape.SPHERE, theme, bumpiness, strength, caves);
+                cube ? GravityField.Shape.CUBE : GravityField.Shape.ROUNDED_CUBE, theme, bumpiness, strength, caves);
     }
 
     /** A big round shell to explore inside, with a tunnel through its top and bottom. */
@@ -151,8 +154,8 @@ public final class GalaxyLayout {
             radii[i] = big
                     ? MIN_PAIR_RADIUS + random.nextDouble() * (MAX_PAIR_RADIUS - MIN_PAIR_RADIUS)
                     : MIN_GATEWAY_RADIUS + random.nextDouble() * (MAX_GATEWAY_RADIUS - MIN_GATEWAY_RADIUS);
-            // Nearly round, so the gaps stay the same size all along.
-            bumps[i] = big ? 0.03 : 0.0;
+            // Nearly flat faces, so the gaps stay the same size all along.
+            bumps[i] = big ? 0.02 : 0.0;
         }
         double cursor = 0.0;
         for (int i = 0; i < count; i++) {
@@ -163,11 +166,12 @@ public final class GalaxyLayout {
         }
         double length = cursor;
 
-        double angle = random.nextDouble() * Math.PI * 2.0;
-        double tilt = (random.nextDouble() * 2.0 - 1.0) * 0.35;
-        double dirX = Math.cos(tilt) * Math.cos(angle);
-        double dirY = Math.sin(tilt);
-        double dirZ = Math.cos(tilt) * Math.sin(angle);
+        // In a row along x or z, so the rounded cubes face each other flat face to flat face.
+        boolean alongX = random.nextBoolean();
+        double sign = random.nextBoolean() ? 1.0 : -1.0;
+        double dirX = alongX ? sign : 0.0;
+        double dirY = 0.0;
+        double dirZ = alongX ? 0.0 : sign;
         double halfX = 0.0;
         double halfY = 0.0;
         double halfZ = 0.0;
@@ -194,7 +198,7 @@ public final class GalaxyLayout {
             PlanetTheme theme = i < count / 2.0 ? first : last;
             double strength = 0.7 + random.nextDouble() * 0.3;
             boolean caves = big && radii[i] >= MIN_CAVE_RADIUS && random.nextDouble() < 0.7;
-            planets.add(new Planet(random.nextLong(), center, radii[i], GravityField.Shape.SPHERE, theme,
+            planets.add(new Planet(random.nextLong(), center, radii[i], GravityField.Shape.ROUNDED_CUBE, theme,
                     bumps[i], strength, caves));
         }
         return planets;
