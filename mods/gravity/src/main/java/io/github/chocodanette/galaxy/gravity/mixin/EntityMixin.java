@@ -8,11 +8,16 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.List;
+
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -35,8 +40,15 @@ public abstract class EntityMixin {
     @Shadow
     public double zo;
 
+    /** On a planet you can walk up one full block without jumping, on any side. */
+    @Unique
+    private static final double GALAXY$PLANET_STEP = 1.0;
+
     @Unique
     private Vec3 galaxy$moveStart = Vec3.ZERO;
+
+    @Unique
+    private Vec3 galaxy$collided = Vec3.ZERO;
 
     @Shadow
     protected static Vec3 getInputVector(Vec3 input, float speed, float yRot) {
@@ -121,8 +133,7 @@ public abstract class EntityMixin {
         if (frame == null || dimensions == null) {
             return;
         }
-        Vec3 up = frame.up();
-        Direction axis = Direction.getApproximateNearest(up.x, up.y, up.z);
+        Direction axis = GravityFrames.boxAxis(frame);
         if (axis == Direction.UP) {
             return;
         }
@@ -142,6 +153,51 @@ public abstract class EntityMixin {
         cir.setReturnValue(new AABB(minX, minY, minZ, maxX, maxY, maxZ));
     }
 
+    /**
+     * Step-up along the hitbox's own "up". Vanilla only steps along world up, which on a
+     * planet's side or underside would mean sliding along the surface instead of climbing.
+     */
+    @Inject(method = "collide", at = @At("RETURN"), cancellable = true)
+    private void galaxy$stepUpOnSide(Vec3 movement, CallbackInfoReturnable<Vec3> cir) {
+        Entity self = galaxy$self();
+        Vec3 result = cir.getReturnValue();
+        galaxy$collided = result;
+        GravityFrame frame = GravityFrames.tilted(self);
+        if (frame == null || !(self instanceof LivingEntity living)) {
+            return;
+        }
+        Direction axis = GravityFrames.boxAxis(frame);
+        if (axis == Direction.UP) {
+            return;
+        }
+        double step = Math.max(living.getAttributeValue(Attributes.STEP_HEIGHT), GALAXY$PLANET_STEP);
+        Vec3 a = axis.getUnitVec3();
+        double wantUp = movement.dot(a);
+        double gotUp = result.dot(a);
+        Vec3 wantFlat = movement.subtract(a.scale(wantUp));
+        Vec3 gotFlat = result.subtract(a.scale(gotUp));
+        if (wantFlat.lengthSqr() < 1.0E-7 || wantFlat.subtract(gotFlat).lengthSqr() < 1.0E-10) {
+            return;
+        }
+        boolean landed = wantUp < 0 && gotUp > wantUp;
+        if (!landed && !self.onGround()) {
+            return;
+        }
+        Level level = self.level();
+        Vec3 settle = a.scale(landed ? gotUp : 0.0);
+        AABB start = self.getBoundingBox().move(settle);
+        Vec3 up = Entity.collideBoundingBox(self, a.scale(step), start, level, List.of());
+        AABB raised = start.move(up);
+        Vec3 flat = Entity.collideBoundingBox(self, wantFlat, raised, level, List.of());
+        if (flat.lengthSqr() <= gotFlat.lengthSqr() + 1.0E-7) {
+            return;
+        }
+        Vec3 down = Entity.collideBoundingBox(self, a.scale(-up.dot(a)), raised.move(flat), level, List.of());
+        Vec3 stepped = settle.add(up).add(flat).add(down);
+        galaxy$collided = stepped;
+        cir.setReturnValue(stepped);
+    }
+
     @Inject(method = "move", at = @At("HEAD"))
     private void galaxy$moveStart(MoverType type, Vec3 delta, CallbackInfo ci) {
         galaxy$moveStart = position();
@@ -154,11 +210,22 @@ public abstract class EntityMixin {
         if (frame == null) {
             return;
         }
+        Entity self = galaxy$self();
         Vec3 down = frame.up().scale(-1);
         double wanted = delta.dot(down);
         double moved = position().subtract(galaxy$moveStart).dot(down);
         boolean blocked = wanted > 1.0E-5 && moved < wanted - 1.0E-5;
         setOnGround(blocked);
+
+        // Vanilla sorts collisions into "walls" and "floor" by world axes. Redo it along the
+        // hitbox's axis, so the planet under you is the floor and doesn't stop sprinting.
+        Vec3 a = GravityFrames.boxAxis(frame).getUnitVec3();
+        Vec3 flatWanted = delta.subtract(a.scale(delta.dot(a)));
+        Vec3 flatMoved = galaxy$collided.subtract(a.scale(galaxy$collided.dot(a)));
+        self.horizontalCollision = flatWanted.subtract(flatMoved).lengthSqr() > 1.0E-10;
+        self.minorHorizontalCollision = self.horizontalCollision;
+        self.verticalCollision = Math.abs(delta.dot(a) - galaxy$collided.dot(a)) > 1.0E-7;
+        self.verticalCollisionBelow = blocked;
         if (blocked) {
             double into = getDeltaMovement().dot(down);
             if (into > 0) {

@@ -86,17 +86,17 @@ public abstract class LivingEntityMixin {
     }
 
     /**
-     * Vanilla step-up lifts you along world "up". When the hitbox is lying on its side that is
-     * a sideways jolt along the planet's surface, so stepping is off until the box is upright.
+     * Vanilla step-up lifts you along world "up". On the top of a planet it is allowed one full
+     * block. When the hitbox lies on its side, vanilla stepping is off and EntityMixin steps
+     * along the box's own axis instead.
      */
     @Inject(method = "maxUpStep", at = @At("RETURN"), cancellable = true)
-    private void galaxy$noStepWhileOnSide(CallbackInfoReturnable<Float> cir) {
+    private void galaxy$planetStep(CallbackInfoReturnable<Float> cir) {
         GravityFrame frame = GravityFrames.tilted(galaxy$self());
         if (frame != null) {
-            Vec3 up = frame.up();
-            if (Direction.getApproximateNearest(up.x, up.y, up.z) != Direction.UP) {
-                cir.setReturnValue(0.0F);
-            }
+            cir.setReturnValue(GravityFrames.boxAxis(frame) == Direction.UP
+                    ? Math.max(cir.getReturnValueF(), 1.0F)
+                    : 0.0F);
         }
     }
 

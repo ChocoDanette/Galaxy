@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
 
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -51,6 +52,12 @@ public final class GravityFrames {
         return entity instanceof LivingEntity ? entity.getExistingDataOrNull(FRAME) : null;
     }
 
+    /** The world axis the hitbox stands along: the one closest to the frame's "up". */
+    public static Direction boxAxis(GravityFrame frame) {
+        Vec3 up = frame.up();
+        return Direction.getApproximateNearest(up.x, up.y, up.z);
+    }
+
     private static void onEntityTick(EntityTickEvent.Pre event) {
         if (!(event.getEntity() instanceof LivingEntity entity)) {
             return;
@@ -60,11 +67,38 @@ public final class GravityFrames {
             return;
         }
         Vec3 down = GravityMath.downDirection(fields, entity.position());
-        entity.getData(FRAME).tick(down.scale(-1));
+        GravityFrame frame = entity.getData(FRAME);
+        Direction axisBefore = boxAxis(frame);
+        frame.tick(down.scale(-1));
+        Direction axisAfter = boxAxis(frame);
+        if (axisAfter != axisBefore) {
+            standUpNewBox(entity, axisAfter);
+        }
         if (tilted(entity) != null) {
             // Vanilla measures falls along world "down", which is wrong on a planet's side.
             entity.resetFallDistance();
         }
+    }
+
+    /**
+     * When the hitbox swings to a new axis it can end up partly inside the planet. Rebuild it
+     * and, on the side that owns the movement, lift the entity along its new "up" until it is
+     * free (at most one block).
+     */
+    private static void standUpNewBox(LivingEntity entity, Direction axis) {
+        Vec3 start = entity.position();
+        entity.setPos(start);
+        if (!entity.isLocalInstanceAuthoritative() || entity.level().noCollision(entity, entity.getBoundingBox())) {
+            return;
+        }
+        Vec3 up = axis.getUnitVec3();
+        for (int i = 1; i <= 10; i++) {
+            entity.setPos(start.add(up.scale(i * 0.1)));
+            if (entity.level().noCollision(entity, entity.getBoundingBox())) {
+                return;
+            }
+        }
+        entity.setPos(start);
     }
 
     static List<GravityField> fieldsFor(Entity entity) {
