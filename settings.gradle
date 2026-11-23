@@ -13,6 +13,8 @@ rootProject.name = 'galaxy'
 // One Gradle project per mod. Add new mods here.
 include 'core'
 include 'gravity'
+include 'worldgen'
 
 project(':core').projectDir = file('mods/core')
 project(':gravity').projectDir = file('mods/gravity')
+project(':worldgen').projectDir = file('mods/worldgen')

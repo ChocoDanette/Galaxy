@@ -10,8 +10,9 @@ Every mod in the pack is its own Gradle project under `mods/`. They share one bu
 | --- | --- | --- |
 | `mods/core` | `galaxy_core` | Shared code: ids, networking and save data used by the other mods |
 | `mods/gravity` | `galaxy_gravity` | Planet gravity that pulls toward a planet's center |
+| `mods/worldgen` | `galaxy_worldgen` | Galaxy Generation: the galaxy dimension and its generated planets |
 
-Planned next: Galaxy Generation, Ship, Survival, Creatures.
+Planned next: Ship, Survival, Creatures.
 
 ## Requirements
 
@@ -69,6 +70,25 @@ What works so far (our own gravity, no other mods needed):
 - You can stand and walk on any side of a planet, including underneath.
 
 Known limits: hitboxes must stay box-shaped along the world axes, so a player's hitbox lies along the nearest axis (for example sideways on a planet's east side). Auto step-up onto blocks and sneaking at edges only work on top of planets for now. There's no fall damage while tilted.
+
+## Visiting the galaxy
+
+Galaxy Generation adds a dimension of empty, starry space (`galaxy_worldgen:galaxy`). Planets in it are generated from rules, so every world and every galaxy is different:
+
+- Space is split into 96 by 96 block cells. Each cell holds at most one planet, which always fits inside it, so planets never overlap. Planets spread up and down between heights -64 and 383.
+- Each galaxy is a round area (1,300 to 2,500 blocks across) with its own personality: how crowded it is, which kinds of planets are common, whether planets tend to be small or big, and how many are cubes. Galaxy 1 is centered on x = 100,000, galaxy 2 on x = 200,000, and so on.
+- A planet is a sphere (6 to 28 blocks radius, with gentle hills) or a cube (11 to 27 blocks wide, flat faces). Its kind decides its blocks: verdant, dune, frost, rocky, ember, mossy, canyon, fungal or crystal. Every planet has a surface layer, soil, rock, a deep layer and a core, with ores in clusters. Gold, redstone and lapis only appear deeper in, diamonds only in the core.
+- Each planet gets its gravity automatically: the server adds it to the Gravity mod's planet list when a player comes within about 190 blocks, and players receive it like any other planet.
+
+Commands (cheats or operator needed):
+
+```
+/galaxy go [number]   travel to a galaxy (1 if no number), landing on the planet in its middle
+/galaxy info          the galaxy you're in and the planet nearest you
+/galaxy leave         back to the overworld spawn
+```
+
+Known limits: there's no gravity between planets, so falling off into open space drops you into the void. Planets have no plants, caves or structures yet.
 
 ## Adding a new mod
 
