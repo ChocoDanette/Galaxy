@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "galaxy_worldgen:planet_turf",
+    "galaxy_worldgen:fungal_turf"
+  ]
+}
