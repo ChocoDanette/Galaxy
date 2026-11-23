@@ -39,11 +39,11 @@ public final class SpaceFlight {
         }
         frame.setFree(allowed);
         PacketDistributor.sendToPlayersTrackingEntity(player,
-                new FlightFramePayload(player.getId(), allowed, frame.currentRotation()));
+                new FlightFrameUpdatePayload(player.getId(), allowed, frame.currentRotation()));
     }
 
     /** On a player's game: another player's frame while they free-fly. */
-    static void onFromServer(Level level, FlightFramePayload payload) {
+    static void onFromServer(Level level, FlightFrameUpdatePayload payload) {
         if (level == null) {
             return;
         }

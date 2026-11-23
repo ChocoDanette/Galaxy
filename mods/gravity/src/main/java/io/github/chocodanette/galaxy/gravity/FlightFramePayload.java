@@ -9,10 +9,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /**
- * A player's free-flight frame. Sent by the flying player to the server each tick, and by the
- * server to the players who can see them, so everyone agrees on which way they're turned.
+ * Player to server: the flying player's free-flight frame, sent each tick while flying.
  *
- * @param entityId the flying player (ignored on the way to the server)
+ * @param entityId the flying player (ignored by the server, which uses the sender)
  * @param free     true while free-flying; false once flight ends and planet gravity takes over
  * @param rotation the frame's rotation from world space
  */

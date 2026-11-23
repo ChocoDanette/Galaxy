@@ -26,16 +26,18 @@ public final class PlanetSync {
                 SyncPlanetsPayload.TYPE,
                 SyncPlanetsPayload.STREAM_CODEC,
                 (payload, context) -> ClientPlanets.set(new GravityWorld(payload.fields(), payload.spacePull(), payload.anchors()), payload.showRanges()));
-        registrar.playBidirectional(
+        registrar.playToServer(
                 FlightFramePayload.TYPE,
                 FlightFramePayload.STREAM_CODEC,
                 (payload, context) -> {
                     if (context.player() instanceof ServerPlayer player) {
                         SpaceFlight.onFromPlayer(player, payload);
-                    } else {
-                        SpaceFlight.onFromServer(context.player().level(), payload);
                     }
                 });
+        registrar.playToClient(
+                FlightFrameUpdatePayload.TYPE,
+                FlightFrameUpdatePayload.STREAM_CODEC,
+                (payload, context) -> SpaceFlight.onFromServer(context.player().level(), payload));
     }
 
     /** Sends the planets of a dimension to everyone in it. Call after any change. */
