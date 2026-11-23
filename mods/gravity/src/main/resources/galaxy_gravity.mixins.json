@@ -5,10 +5,12 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "EntityMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "PlayerMixin"
   ],
   "client": [
     "client.CameraMixin",
+    "client.LevelExtractorMixin",
     "client.LocalPlayerMixin"
   ],
   "injectors": {

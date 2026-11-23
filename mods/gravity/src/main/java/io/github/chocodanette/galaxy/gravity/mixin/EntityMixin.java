@@ -134,23 +134,9 @@ public abstract class EntityMixin {
             return;
         }
         Direction axis = GravityFrames.boxAxis(frame);
-        if (axis == Direction.UP) {
-            return;
+        if (axis != Direction.UP) {
+            cir.setReturnValue(GravityFrames.orientedBox(axis, dimensions.width(), dimensions.height(), pos));
         }
-        double w = dimensions.width() / 2.0;
-        double h = dimensions.height();
-        double minX = pos.x - w, maxX = pos.x + w;
-        double minY = pos.y - w, maxY = pos.y + w;
-        double minZ = pos.z - w, maxZ = pos.z + w;
-        switch (axis) {
-            case DOWN -> { minY = pos.y - h; maxY = pos.y; }
-            case EAST -> { minX = pos.x; maxX = pos.x + h; }
-            case WEST -> { minX = pos.x - h; maxX = pos.x; }
-            case SOUTH -> { minZ = pos.z; maxZ = pos.z + h; }
-            case NORTH -> { minZ = pos.z - h; maxZ = pos.z; }
-            default -> { }
-        }
-        cir.setReturnValue(new AABB(minX, minY, minZ, maxX, maxY, maxZ));
     }
 
     /**

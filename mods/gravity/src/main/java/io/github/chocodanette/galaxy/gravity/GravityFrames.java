@@ -9,6 +9,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -56,6 +57,26 @@ public final class GravityFrames {
     public static Direction boxAxis(GravityFrame frame) {
         Vec3 up = frame.up();
         return Direction.getApproximateNearest(up.x, up.y, up.z);
+    }
+
+    /**
+     * A hitbox of the given size stood up along an axis, with the feet at {@code pos}.
+     * For {@link Direction#UP} this is the vanilla box.
+     */
+    public static AABB orientedBox(Direction axis, double width, double height, Vec3 pos) {
+        double w = width / 2.0;
+        double minX = pos.x - w, maxX = pos.x + w;
+        double minY = pos.y, maxY = pos.y + height;
+        double minZ = pos.z - w, maxZ = pos.z + w;
+        switch (axis) {
+            case DOWN -> { minY = pos.y - height; maxY = pos.y; }
+            case EAST -> { minX = pos.x; maxX = pos.x + height; minY = pos.y - w; maxY = pos.y + w; }
+            case WEST -> { minX = pos.x - height; maxX = pos.x; minY = pos.y - w; maxY = pos.y + w; }
+            case SOUTH -> { minZ = pos.z; maxZ = pos.z + height; minY = pos.y - w; maxY = pos.y + w; }
+            case NORTH -> { minZ = pos.z - height; maxZ = pos.z; minY = pos.y - w; maxY = pos.y + w; }
+            default -> { }
+        }
+        return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
     private static void onEntityTick(EntityTickEvent.Pre event) {
