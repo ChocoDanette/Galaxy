@@ -56,4 +56,30 @@ class GravityMathTest {
         assertThrows(IllegalArgumentException.class, () -> new GravityField(Vec3.ZERO, 20, 10, 1));
         assertThrows(IllegalArgumentException.class, () -> new GravityField(Vec3.ZERO, 20, 30, -1));
     }
+
+    @Test
+    void cubeFacesPullStraightIn() {
+        GravityField cube = new GravityField(Vec3.ZERO, 5, 25, 1, GravityField.Shape.CUBE);
+        // Anywhere on the flat part of a face, down is straight into the face (no pull to its middle).
+        assertVec(new Vec3(0, -1, 0), GravityMath.downDirection(List.of(cube), new Vec3(2.5, 5, -2.5)));
+        assertVec(new Vec3(-1, 0, 0), GravityMath.downDirection(List.of(cube), new Vec3(5, 2, 2)));
+        assertVec(new Vec3(0, 0, 1), GravityMath.downDirection(List.of(cube), new Vec3(-1, -3, -5)));
+    }
+
+    @Test
+    void cubeEdgesBendGradually() {
+        GravityField cube = new GravityField(Vec3.ZERO, 5, 25, 1, GravityField.Shape.CUBE);
+        Vec3 corner = GravityMath.downDirection(List.of(cube), new Vec3(5, 5, 0));
+        double s = Math.sqrt(0.5);
+        assertVec(new Vec3(-s, -s, 0), corner);
+        Vec3 nearEdge = GravityMath.downDirection(List.of(cube), new Vec3(4, 5, 0));
+        assertTrue(nearEdge.y < -s && nearEdge.x < 0, "tilts partway near the edge");
+    }
+
+    @Test
+    void cubeSurfaceDistance() {
+        GravityField cube = new GravityField(Vec3.ZERO, 5, 25, 1, GravityField.Shape.CUBE);
+        assertEquals(0.0, cube.distanceToSurface(new Vec3(1, 5, -2)), EPS);
+        assertEquals(3.0, cube.distanceToSurface(new Vec3(8, 0, 0)), EPS);
+    }
 }

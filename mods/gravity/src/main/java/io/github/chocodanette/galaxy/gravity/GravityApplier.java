@@ -53,6 +53,13 @@ public final class GravityApplier {
             gravity.addTransientModifier(CANCEL_VANILLA);
         }
         Vec3 down = GravityMath.downDirection(field.get(), entity.position(), GravityMath.VANILLA_DOWN);
+        GravityFrame frame = GravityFrames.tilted(entity);
+        if (frame != null && entity.onGround()) {
+            // Standing on a surface, pull straight into the block face you stand on. The true
+            // direction can be slanted near a cube's edge or on a small sphere, and its sideways
+            // part would make you slide slowly toward the middle of the face.
+            down = GravityFrames.boxAxis(frame).getUnitVec3().scale(-1);
+        }
         double pull = gravity.getBaseValue() * field.get().strength();
         entity.setDeltaMovement(entity.getDeltaMovement().add(down.scale(pull)));
     }
