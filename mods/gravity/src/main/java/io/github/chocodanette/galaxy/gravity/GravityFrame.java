@@ -26,6 +26,48 @@ public final class GravityFrame {
      * how high above it the entity has risen. NaN until it has touched the ground.
      */
     private double takeoffDistance = Double.NaN;
+    /**
+     * True during free flight in space: the frame follows the player's view instead of turning
+     * toward a planet.
+     */
+    private boolean free;
+    /** The way gravity pulls this entity, as picked by the last frame update (null = unknown). */
+    private Vec3 gravityDown;
+    /** Ticks since the entity last stood on something. */
+    private int ticksOffGround = 1000;
+
+    public Vec3 gravityDown() {
+        return gravityDown;
+    }
+
+    public void setGravityDown(Vec3 down) {
+        gravityDown = down;
+    }
+
+    /** Counts up while in the air, back to 0 on landing. Returns the new count. */
+    public int updateGround(boolean onGround) {
+        ticksOffGround = onGround ? 0 : Math.min(ticksOffGround + 1, 1000);
+        return ticksOffGround;
+    }
+
+    public boolean isFree() {
+        return free;
+    }
+
+    public void setFree(boolean free) {
+        this.free = free;
+    }
+
+    /** A copy of the current rotation. */
+    public Quaternionf currentRotation() {
+        return new Quaternionf(rotation);
+    }
+
+    /** Jumps straight to a rotation, with no turning in between (used by free flight). */
+    public void snapTo(Quaternionf target) {
+        rotation.set(target).normalize();
+        previous.set(rotation);
+    }
 
     /** Turns toward a target "up" (unit vector), at most {@link #MAX_TURN_DEGREES_PER_TICK}. */
     public void tick(Vec3 targetUp) {
@@ -42,6 +84,29 @@ public final class GravityFrame {
             turn = new Quaternionf().slerp(turn, maxStep / angle);
         }
         rotation.premul(turn).normalize();
+    }
+
+    /**
+     * Once the frame is back upright, it can still carry a turn around "up" picked up on the
+     * way (walking over a few edges, or round a corner). While tilted that turn is part of
+     * the view, but upright the game ignores the frame, so the view would jump sideways by
+     * that much. This removes the turn from the frame and returns it as a change of yaw, in
+     * degrees, so the caller can add it to the entity's yaw and the view stays where it was.
+     * Returns 0 when there is nothing to remove.
+     */
+    public float settleTwist() {
+        if (isTilted()) {
+            return 0.0F;
+        }
+        Vector3f forward = rotation.transform(new Vector3f(0, 0, 1));
+        float twist = (float) Math.atan2(forward.x, forward.z);
+        if (Math.abs(twist) < 1.0E-5F) {
+            return 0.0F;
+        }
+        Quaternionf undo = new Quaternionf().rotationY(-twist);
+        rotation.mul(undo).normalize();
+        previous.mul(undo).normalize();
+        return -twist * Mth.RAD_TO_DEG;
     }
 
     public double takeoffDistance() {

@@ -9,6 +9,11 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.MultifaceBlock;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.WorldGenRegion;
@@ -66,7 +71,8 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
         int top = Math.min(chunk.getMaxY(), GalaxyLayout.MAX_Y);
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
 
-        for (Planet planet : GalaxyLayout.planetsTouching(randomState.seed(), minX, minZ, maxX, maxZ)) {
+        List<Planet> planets = GalaxyLayout.planetsTouching(randomState.seed(), minX, minZ, maxX, maxZ);
+        for (Planet planet : planets) {
             Vec3 c = planet.center();
             double extent = planet.extent() + 1.0;
             int x0 = Math.max(minX, (int) Math.floor(c.x - extent));
@@ -89,17 +95,51 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
                             Block block = plant.bloom() ? PlanetBlocks.STARBLOOM.get() : PlanetBlocks.PLANET_GRASS.get();
                             chunk.setBlockState(cursor.set(x, y, z),
                                     block.defaultBlockState().setValue(PlanetPlantBlock.FACING, plant.up()));
+                            continue;
+                        }
+                        Direction lichen = planet.lichenAt(x, y, z);
+                        if (lichen != null) {
+                            chunk.setBlockState(cursor.set(x, y, z), Blocks.GLOW_LICHEN.defaultBlockState()
+                                    .setValue(MultifaceBlock.getFaceProperty(lichen), true));
                         }
                     }
                 }
             }
         }
+        // Trees go in after all the ground, and only into air or plants, so they never cut into a planet.
+        for (Planet planet : planets) {
+            for (Planet.TreeBlock tree : planet.trees()) {
+                if (tree.x() < minX || tree.x() > maxX || tree.z() < minZ || tree.z() > maxZ
+                        || tree.y() < bottom || tree.y() > top) {
+                    continue;
+                }
+                cursor.set(tree.x(), tree.y(), tree.z());
+                BlockState here = chunk.getBlockState(cursor);
+                boolean trunk = tree.part() == Trees.Part.TRUNK;
+                if (!here.isAir() && !here.canBeReplaced() && !(trunk && here.is(BlockTags.LEAVES))) {
+                    continue;
+                }
+                chunk.setBlockState(cursor, treeState(tree));
+            }
+        }
         return CompletableFuture.completedFuture(chunk);
+    }
+
+    private static BlockState treeState(Planet.TreeBlock tree) {
+        BlockState state = tree.style().block(tree.part()).defaultBlockState();
+        if (state.hasProperty(RotatedPillarBlock.AXIS)) {
+            state = state.setValue(RotatedPillarBlock.AXIS, tree.up().getAxis());
+        }
+        if (state.hasProperty(LeavesBlock.PERSISTENT)) {
+            // Leaves far from "down" would otherwise think they're cut off and fall apart.
+            state = state.setValue(LeavesBlock.PERSISTENT, true);
+        }
+        return state;
     }
 
     @Override
     public void applyBiomeDecoration(WorldGenLevel level, ChunkAccess chunk, StructureManager structureManager) {
-        // Nothing yet: planets get their surface details in a later version.
+        // Nothing: plants, caves and trees are all built with the ground in buildTerrain.
     }
 
     @Override

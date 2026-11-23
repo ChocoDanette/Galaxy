@@ -4,7 +4,10 @@ import java.util.function.Supplier;
 
 import org.jspecify.annotations.Nullable;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -86,17 +89,68 @@ public final class GravityFrames {
         if (world.fields().isEmpty() && !entity.hasData(FRAME)) {
             return;
         }
-        Vec3 down = GravityMath.downDirection(world, entity.position());
         GravityFrame frame = entity.getData(FRAME);
-        Direction axisBefore = boxAxis(frame);
-        frame.tick(down.scale(-1));
-        Direction axisAfter = boxAxis(frame);
-        if (axisAfter != axisBefore) {
-            standUpNewBox(entity, axisAfter);
+        if (frame.isFree()) {
+            // Free flight in space owns the frame (see SpaceFlight).
+            entity.resetFallDistance();
+            return;
         }
+        Vec3 up = upFor(entity, world, frame);
+        frame.setGravityDown(up.scale(-1));
+        Direction axisBefore = boxAxis(frame);
+        frame.tick(up);
+        float yawChange = frame.settleTwist();
+        if (yawChange != 0.0F && entity.isLocalInstanceAuthoritative()) {
+            turnYaw(entity, yawChange);
+        }
+        afterTurn(entity, axisBefore);
         if (tilted(entity) != null) {
             // Vanilla measures falls along world "down", which is wrong on a planet's side.
             entity.resetFallDistance();
+        }
+    }
+
+    /** Ticks after leaving the ground during which "up" still follows the ground. */
+    private static final int GROUND_GRACE_TICKS = 3;
+
+    /**
+     * Which way is up for this entity now. In {@link GravityMode#GROUND} mode, while standing
+     * on something (or just after), it follows the ground around the feet; in the air, and
+     * in {@link GravityMode#CENTER} mode, it is the planet's own pull.
+     */
+    private static Vec3 upFor(LivingEntity entity, GravityWorld world, GravityFrame frame) {
+        Vec3 planetUp = GravityMath.downDirection(world, entity.position()).scale(-1);
+        int offGround = frame.updateGround(entity.onGround());
+        if (world.mode() != GravityMode.GROUND || offGround > GROUND_GRACE_TICKS
+                || GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
+            return planetUp;
+        }
+        Level level = entity.level();
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        GroundGravity.Solidity solidity = (x, y, z) -> {
+            cursor.set(x, y, z);
+            BlockState state = level.getBlockState(cursor);
+            return !state.isAir() && !state.getCollisionShape(level, cursor).isEmpty();
+        };
+        return GroundGravity.upAt(solidity, entity.position(), frame.up(), planetUp).orElse(planetUp);
+    }
+
+    /** Turns the entity's yaw (view, head and body) by some degrees, with no smoothing jump. */
+    private static void turnYaw(LivingEntity entity, float degrees) {
+        entity.setYRot(entity.getYRot() + degrees);
+        entity.yRotO += degrees;
+        entity.setYHeadRot(entity.getYHeadRot() + degrees);
+        entity.yHeadRotO += degrees;
+        entity.yBodyRot += degrees;
+        entity.yBodyRotO += degrees;
+    }
+
+    /** Call after a frame turned: rebuilds the hitbox if it now stands along another axis. */
+    public static void afterTurn(LivingEntity entity, Direction axisBefore) {
+        GravityFrame frame = entity.getData(FRAME);
+        Direction axisAfter = boxAxis(frame);
+        if (axisAfter != axisBefore) {
+            standUpNewBox(entity, axisAfter);
         }
     }
 

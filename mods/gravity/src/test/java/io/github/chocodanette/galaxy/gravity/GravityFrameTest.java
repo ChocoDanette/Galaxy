@@ -60,4 +60,63 @@ class GravityFrameTest {
         }
         assertFalse(frame.isTilted());
     }
+
+    /** Where an entity looks, in world space, for a yaw in its own frame (level view). */
+    private static Vec3 worldLook(GravityFrame frame, float yawDegrees) {
+        double yaw = Math.toRadians(yawDegrees);
+        return frame.toWorld(new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)));
+    }
+
+    private static final Vec3 PLANET = new Vec3(0.5, 100.5, 0.5);
+
+    /** Walks along the local "forward" over a rounded cube, keeping to its surface. */
+    private static Vec3 walk(GravityField field, GravityFrame frame, Vec3 pos, float yaw, int ticks) {
+        for (int i = 0; i < ticks; i++) {
+            Vec3 up = pos.subtract(field.pullPoint(pos)).normalize();
+            frame.tick(up);
+            frame.settleTwist();
+            pos = pos.add(worldLook(frame, yaw).scale(0.25));
+            Vec3 newUp = pos.subtract(field.pullPoint(pos)).normalize();
+            pos = pos.subtract(newUp.scale(field.distanceToSurface(pos)));
+        }
+        return pos;
+    }
+
+    @Test
+    void walkingStraightOverAnEdgeKeepsTheHeading() {
+        GravityField field = new GravityField(PLANET, 12, 40, 1.0, GravityField.Shape.ROUNDED_CUBE);
+        GravityFrame frame = new GravityFrame();
+        // Start on the top face, heading east (yaw -90), off-center so the path isn't special.
+        Vec3 pos = walk(field, frame, PLANET.add(-3, 12, 4), -90, 90);
+        Vec3 up = frame.up();
+        assertTrue(up.x > 0.99, "should be on the east face now: " + up);
+        Vec3 look = worldLook(frame, -90);
+        assertTrue(look.y < -0.99, "should be heading straight down the east face: " + look);
+        assertEquals(4.0, pos.z - PLANET.z, 0.3, "drifted sideways");
+    }
+
+    @Test
+    void comingBackUprightKeepsTheViewWhereItWas() {
+        GravityFrame frame = new GravityFrame();
+        // Over three edges in a loop (top, east, south, top): the frame comes back upright
+        // turned around "up" by a quarter turn.
+        Vec3[] ups = {new Vec3(1, 0, 0), new Vec3(0, 0, 1), new Vec3(0, 1, 0)};
+        float yaw = 30;
+        for (Vec3 target : ups) {
+            for (int i = 0; i < 20; i++) {
+                Vec3 before = worldLook(frame, yaw);
+                frame.tick(target);
+                Vec3 lookAfterTurn = worldLook(frame, yaw);
+                yaw += frame.settleTwist();
+                Vec3 after = worldLook(frame, yaw);
+                assertEquals(0.0, angleDegrees(lookAfterTurn, after), 0.01, "settling moved the view");
+                assertTrue(angleDegrees(before, after) <= GravityFrame.MAX_TURN_DEGREES_PER_TICK + 0.01,
+                        "the view jumped");
+            }
+        }
+        assertFalse(frame.isTilted());
+        assertEquals(0.0, angleDegrees(new Vec3(0, 0, 1), frame.toWorld(new Vec3(0, 0, 1))), 0.01,
+                "upright frame should carry no turn");
+        assertTrue(Math.abs(Math.abs(yaw - 30) - 90) < 0.5, "the loop's quarter turn went into the yaw: " + yaw);
+    }
 }

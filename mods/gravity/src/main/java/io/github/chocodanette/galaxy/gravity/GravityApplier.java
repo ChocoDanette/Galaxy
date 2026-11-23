@@ -52,6 +52,10 @@ public final class GravityApplier {
         if (!gravity.hasModifier(NO_VANILLA_GRAVITY)) {
             gravity.addTransientModifier(CANCEL_VANILLA);
         }
+        if (SpaceFlight.isFreeFlying(entity)) {
+            // Free flight in space: nothing pulls you (vanilla gravity stays off too).
+            return;
+        }
         GravityField field = pull.get().field();
         Vec3 down = pull.get().down();
         double scale = pull.get().scale();
@@ -60,6 +64,10 @@ public final class GravityApplier {
                 anyFrame.setTakeoffDistance(field.distanceToSurface(entity.position()));
                 scale = field.strength() * GravityMath.pullFactor(field, entity.position(), anyFrame.takeoffDistance());
             }
+        }
+        if (anyFrame != null && anyFrame.gravityDown() != null && pull.get().inField()) {
+            // Living things are pulled the way their frame update picked (into the ground).
+            down = anyFrame.gravityDown();
         }
         GravityFrame frame = GravityFrames.tilted(entity);
         if (frame != null && entity.onGround()) {

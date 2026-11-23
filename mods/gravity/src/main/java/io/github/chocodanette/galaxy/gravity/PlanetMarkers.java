@@ -47,8 +47,18 @@ public final class PlanetMarkers {
                             + "transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],"
                             + "translation:[%sf,%sf,%sf],scale:[%sf,%sf,%sf]}}",
                     c.x, c.y, c.z, TAG,
-                    field.shape() == GravityField.Shape.CUBE ? 0x55FFFF : 0xFFAA00,
-                    field.shape() == GravityField.Shape.CUBE ? "diamond_block" : "gold_block",
+                    switch (field.shape()) {
+                        case CUBE -> 0x55FFFF;
+                        case HOLLOW -> 0x55FF55;
+                        case ROUNDED_CUBE -> 0xFF55FF;
+                        default -> 0xFFAA00;
+                    },
+                    switch (field.shape()) {
+                        case CUBE -> "diamond_block";
+                        case HOLLOW -> "emerald_block";
+                        case ROUNDED_CUBE -> "amethyst_block";
+                        default -> "gold_block";
+                    },
                     -half, -half, -half, SIZE, SIZE, SIZE);
             level.getServer().getCommands().performPrefixedCommand(source, command);
         }

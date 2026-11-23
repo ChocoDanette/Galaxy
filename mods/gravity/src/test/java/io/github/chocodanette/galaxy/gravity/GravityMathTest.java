@@ -84,24 +84,13 @@ class GravityMathTest {
     }
 
     @Test
-    void pullIsFullAtTheSurfaceAndFadesTowardTheEdge() {
-        GravityField planet = new GravityField(Vec3.ZERO, 20, 60, 1);
-        assertEquals(1.0, GravityMath.pullFactor(planet, new Vec3(0, 20, 0), Double.NaN), EPS);
-        assertEquals(0.25, GravityMath.pullFactor(planet, new Vec3(0, 40, 0), Double.NaN), EPS);
-        assertEquals(GravityMath.MIN_PULL_FACTOR, GravityMath.pullFactor(planet, new Vec3(0, 60, 0), Double.NaN), EPS);
-        // Inside the planet the pull stays full.
-        assertEquals(1.0, GravityMath.pullFactor(planet, new Vec3(0, 5, 0), Double.NaN), EPS);
-    }
-
-    @Test
-    void pullWeakensAboveTheTakeoffSpotOnly() {
-        GravityField planet = new GravityField(Vec3.ZERO, 20, 1000, 1);
-        double onGround = GravityMath.pullFactor(planet, new Vec3(0, 20, 0), 0.0);
-        double twoUp = GravityMath.pullFactor(planet, new Vec3(0, 22, 0), 0.0);
-        double belowTakeoff = GravityMath.pullFactor(planet, new Vec3(0, 22, 0), 5.0);
-        assertEquals(1.0, onGround, 1.0E-6);
-        assertTrue(twoUp < 0.3, "two blocks up should be much lighter, was " + twoUp);
-        assertTrue(belowTakeoff > 0.99, "below the take-off spot pull is full, was " + belowTakeoff);
+    void pullIsTheSameEverywhereOnAPlanet() {
+        GravityField planet = new GravityField(Vec3.ZERO, 20, 60, 0.8);
+        for (Vec3 pos : List.of(new Vec3(0, 20, 0), new Vec3(0, 22, 0), new Vec3(0, 40, 0), new Vec3(0, 59, 0), new Vec3(0, 5, 0))) {
+            assertEquals(1.0, GravityMath.pullFactor(planet, pos, 0.0), EPS);
+            assertEquals(0.8, GravityMath.pull(new GravityWorld(List.of(planet), 0.08, List.of()), pos, 0.0)
+                    .orElseThrow().scale(), EPS);
+        }
     }
 
     @Test
@@ -122,5 +111,62 @@ class GravityMathTest {
         GravityMath.Pull homePull = GravityMath.pull(home, new Vec3(45, 0, 0), Double.NaN).orElseThrow();
         assertVec(new Vec3(1, 0, 0), homePull.down());
         assertEquals(0.15, homePull.scale(), EPS);
+    }
+
+    @Test
+    void hollowPlanetPullsInwardOutsideAndOutwardInside() {
+        // Radius 20: a 5 block shell, so the open space inside reaches 15 blocks from the center.
+        GravityField hollow = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.HOLLOW);
+        assertEquals(15.0, hollow.innerRadius(), EPS);
+        assertVec(new Vec3(-1, 0, 0), GravityMath.downDirection(List.of(hollow), new Vec3(25, 0, 0)));
+        assertVec(new Vec3(1, 0, 0), GravityMath.downDirection(List.of(hollow), new Vec3(12, 0, 0)));
+        assertVec(new Vec3(0, 0, -1), GravityMath.downDirection(List.of(hollow), new Vec3(0, 0, -10)));
+        assertEquals(0.0, hollow.distanceToSurface(new Vec3(15, 0, 0)), EPS);
+        assertEquals(3.0, hollow.distanceToSurface(new Vec3(12, 0, 0)), EPS);
+        assertEquals(5.0, hollow.distanceToSurface(new Vec3(0, 0, 25)), EPS);
+    }
+
+    @Test
+    void hollowPlanetTunnelPullsTowardItsWall() {
+        GravityField hollow = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.HOLLOW);
+        // Halfway through the shell, inside the tunnel at the top: down points out to the tunnel wall.
+        Vec3 down = GravityMath.downDirection(List.of(hollow), new Vec3(2, 17.5, 0));
+        assertTrue(down.x > 0.95, "down in the tunnel was " + down);
+        Vec3 otherSide = GravityMath.downDirection(List.of(hollow), new Vec3(0, -17.5, -2));
+        assertTrue(otherSide.z < -0.95, "down in the bottom tunnel was " + otherSide);
+    }
+
+    @Test
+    void hollowPlanetGravityTurnsSmoothlyFromOutsideThroughTheTunnelToInside() {
+        GravityField hollow = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.HOLLOW);
+        // Follow a path one block above the ground: across the top, down the tunnel wall and
+        // onto the inner ground. Down should never jump around along the way.
+        List<Vec3> path = new java.util.ArrayList<>();
+        for (int i = 0; i <= 100; i++) {
+            double angle = Math.toRadians(60 - i * 0.46); // over the top, toward the tunnel
+            path.add(new Vec3(Math.sin(angle) * 21, Math.cos(angle) * 21, 0));
+        }
+        Vec3 rim = path.get(path.size() - 1);
+        double bottomAngle = Math.asin(2.0 / 14.0);
+        for (int i = 1; i <= 100; i++) {
+            double t = i / 100.0;
+            // Across to 1 block from the tunnel wall, then down the tunnel.
+            path.add(t < 0.3
+                    ? new Vec3(rim.x + (2.0 - rim.x) * t / 0.3, rim.y, 0)
+                    : new Vec3(2.0, rim.y + (Math.cos(bottomAngle) * 14 - rim.y) * (t - 0.3) / 0.7, 0));
+        }
+        for (int i = 1; i <= 100; i++) {
+            double angle = bottomAngle + Math.toRadians(i * 0.5); // out onto the inner ground
+            path.add(new Vec3(Math.sin(angle) * 14, Math.cos(angle) * 14, 0));
+        }
+        Vec3 previous = null;
+        for (Vec3 pos : path) {
+            Vec3 down = GravityMath.downDirection(List.of(hollow), pos);
+            if (previous != null) {
+                assertTrue(Math.toDegrees(Math.acos(Math.min(1, previous.dot(down)))) < 45,
+                        "gravity jumped near " + pos);
+            }
+            previous = down;
+        }
     }
 }
