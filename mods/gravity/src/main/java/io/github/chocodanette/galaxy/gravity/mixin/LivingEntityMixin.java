@@ -6,8 +6,10 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -81,6 +83,21 @@ public abstract class LivingEntityMixin {
         float verticalFriction = computeModifiedFriction(0.98F, airDragModifier);
         Vec3 local = frame.toLocal(movement);
         self.setDeltaMovement(frame.toWorld(new Vec3(local.x * friction, local.y * verticalFriction, local.z * friction)));
+    }
+
+    /**
+     * Vanilla step-up lifts you along world "up". When the hitbox is lying on its side that is
+     * a sideways jolt along the planet's surface, so stepping is off until the box is upright.
+     */
+    @Inject(method = "maxUpStep", at = @At("RETURN"), cancellable = true)
+    private void galaxy$noStepWhileOnSide(CallbackInfoReturnable<Float> cir) {
+        GravityFrame frame = GravityFrames.tilted(galaxy$self());
+        if (frame != null) {
+            Vec3 up = frame.up();
+            if (Direction.getApproximateNearest(up.x, up.y, up.z) != Direction.UP) {
+                cir.setReturnValue(0.0F);
+            }
+        }
     }
 
     @Inject(method = "jumpFromGround", at = @At("HEAD"), cancellable = true)
