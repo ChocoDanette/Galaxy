@@ -49,6 +49,14 @@ Gravity has test commands until galaxy generation places planets by itself. In a
 
 This adds a planet centered 20 blocks below you, with a surface radius of 15 blocks, pulling anything within 45 blocks of its center. Build a ball of blocks there (radius 15) to stand on. An optional last number sets the strength (1 = normal gravity).
 
+For a cube of blocks, give two opposite corner blocks instead, so the center is exact:
+
+```
+/galaxy planet cube <x1> <y1> <z1> <x2> <y2> <z2> 25
+```
+
+On a cube, each face walks like flat ground, and gravity only bends over the last 2 blocks before an edge.
+
 Other commands: `/galaxy planet list`, `/galaxy planet remove <number>`, `/galaxy planet clear`.
 
 What works so far (our own gravity, no other mods needed):

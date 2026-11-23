@@ -34,16 +34,21 @@ public final class GravityMath {
     }
 
     /**
-     * Unit vector pointing "down" at a position, toward the field's center.
-     * At the exact center, returns the fallback direction.
+     * Unit vector pointing "down" at a position: toward the center of a sphere, straight into
+     * the face of a cube (bending over its edges). Toward the center when deep inside a cube,
+     * and the fallback direction at the exact center.
      */
     public static Vec3 downDirection(GravityField field, Vec3 pos, Vec3 fallback) {
-        Vec3 toCenter = field.center().subtract(pos);
-        double length = toCenter.length();
+        Vec3 down = field.pullPoint(pos).subtract(pos);
+        double length = down.length();
         if (length < MIN_DISTANCE) {
-            return fallback;
+            down = field.center().subtract(pos);
+            length = down.length();
+            if (length < MIN_DISTANCE) {
+                return fallback;
+            }
         }
-        return toCenter.scale(1.0 / length);
+        return down.scale(1.0 / length);
     }
 
     /** Vanilla-style "down" used when no field reaches a position. */
