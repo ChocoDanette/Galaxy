@@ -21,7 +21,15 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import org.jspecify.annotations.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+
 import io.github.chocodanette.galaxy.gravity.GravityFrame;
+import io.github.chocodanette.galaxy.gravity.GravityMath;
 import io.github.chocodanette.galaxy.gravity.GravityFrames;
 
 /**
@@ -49,6 +57,10 @@ public abstract class EntityMixin {
 
     @Unique
     private Vec3 galaxy$collided = Vec3.ZERO;
+
+    /** Planet pull applied to a non-living entity this tick (items, arrows, falling blocks), or null. */
+    @Unique
+    private GravityMath.@Nullable Pull galaxy$itemPull;
 
     @Shadow
     protected static Vec3 getInputVector(Vec3 input, float speed, float yRot) {
@@ -184,6 +196,70 @@ public abstract class EntityMixin {
         cir.setReturnValue(stepped);
     }
 
+    /**
+     * Items, arrows, thrown things and falling blocks fall toward the planet too. Players and
+     * mobs are handled by GravityApplier instead. Both sides run this with the same synced
+     * planets, so the client's guess matches the server.
+     */
+    @Inject(method = "applyGravity", at = @At("HEAD"), cancellable = true)
+    private void galaxy$planetGravity(CallbackInfo ci) {
+        Entity self = galaxy$self();
+        galaxy$itemPull = null;
+        if (self instanceof LivingEntity) {
+            return;
+        }
+        double gravity = self.getGravity();
+        if (gravity == 0.0) {
+            return;
+        }
+        var world = GravityFrames.worldFor(self);
+        if (world.fields().isEmpty()) {
+            return;
+        }
+        var pull = GravityMath.pull(world, self.position(), Double.NaN);
+        if (pull.isEmpty()) {
+            return;
+        }
+        galaxy$itemPull = pull.get();
+        setDeltaMovement(getDeltaMovement().add(pull.get().down().scale(gravity * pull.get().scale())));
+        ci.cancel();
+    }
+
+    /**
+     * A non-living thing pulled by a planet is "on the ground" when blocked along its pull, so
+     * items rest and slow down on any side. A falling block that lands on a planet's side is
+     * placed right there (vanilla only knows how to land on top of a block).
+     */
+    @Unique
+    private void galaxy$landItem(Entity self, Vec3 delta) {
+        GravityMath.Pull pull = galaxy$itemPull;
+        if (pull == null || pull.down().y < -0.99) {
+            return;
+        }
+        Vec3 down = pull.down();
+        double wanted = delta.dot(down);
+        double moved = position().subtract(galaxy$moveStart).dot(down);
+        boolean blocked = wanted > 1.0E-5 && moved < wanted - 1.0E-5;
+        setOnGround(blocked);
+        if (!blocked) {
+            return;
+        }
+        double into = getDeltaMovement().dot(down);
+        if (into > 0) {
+            setDeltaMovement(getDeltaMovement().subtract(down.scale(into)));
+        }
+        if (self instanceof FallingBlockEntity falling && self.level() instanceof ServerLevel level && falling.isAlive()) {
+            BlockPos pos = self.blockPosition();
+            BlockState state = falling.getBlockState();
+            if (level.getBlockState(pos).canBeReplaced() && level.setBlock(pos, state, 3)) {
+                falling.discard();
+            } else {
+                falling.spawnAtLocation(level, state.getBlock());
+                falling.discard();
+            }
+        }
+    }
+
     @Inject(method = "move", at = @At("HEAD"))
     private void galaxy$moveStart(MoverType type, Vec3 delta, CallbackInfo ci) {
         galaxy$moveStart = position();
@@ -193,10 +269,13 @@ public abstract class EntityMixin {
     @Inject(method = "move", at = @At("TAIL"))
     private void galaxy$moveEnd(MoverType type, Vec3 delta, CallbackInfo ci) {
         GravityFrame frame = GravityFrames.tilted(galaxy$self());
+        Entity self = galaxy$self();
         if (frame == null) {
+            if (!(self instanceof LivingEntity)) {
+                galaxy$landItem(self, delta);
+            }
             return;
         }
-        Entity self = galaxy$self();
         Vec3 down = frame.up().scale(-1);
         double wanted = delta.dot(down);
         double moved = position().subtract(galaxy$moveStart).dot(down);

@@ -96,6 +96,58 @@ public final class GravityMath {
         return Math.max(0.0, Math.min(1.0, value));
     }
 
+    /** How much harder a home planet pulls from space than other planets. */
+    public static final double ANCHOR_BOOST = 1.5;
+
+    /**
+     * The pull on something at a position.
+     *
+     * @param down    unit vector the pull points along
+     * @param scale   share of normal gravity (planet strength and fading included)
+     * @param field   the planet doing the pulling
+     * @param inField true inside the planet's range, false for the weak pull from space
+     */
+    public record Pull(Vec3 down, double scale, GravityField field, boolean inField) {
+    }
+
+    /**
+     * The pull at a position: the governing planet inside a range, otherwise the weak pull
+     * toward the nearest planet when the dimension has one. Empty means vanilla gravity.
+     *
+     * @param takeoffDistance see {@link #pullFactor}; NaN for things that don't jump
+     */
+    public static Optional<Pull> pull(GravityWorld world, Vec3 pos, double takeoffDistance) {
+        Optional<GravityField> governing = governingField(world.fields(), pos);
+        if (governing.isPresent()) {
+            GravityField field = governing.get();
+            return Optional.of(new Pull(downDirection(field, pos, VANILLA_DOWN),
+                    field.strength() * pullFactor(field, pos, takeoffDistance), field, true));
+        }
+        if (world.spacePull() <= 0) {
+            return Optional.empty();
+        }
+        GravityField best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (GravityField field : world.fields()) {
+            double score = field.distanceToSurface(pos) / (world.isAnchor(field) ? ANCHOR_BOOST : 1.0);
+            if (score < bestScore) {
+                bestScore = score;
+                best = field;
+            }
+        }
+        if (best == null) {
+            return Optional.empty();
+        }
+        double boost = world.isAnchor(best) ? ANCHOR_BOOST : 1.0;
+        return Optional.of(new Pull(downDirection(best, pos, VANILLA_DOWN),
+                world.spacePull() * best.strength() * boost, best, false));
+    }
+
+    /** Down direction under a dimension's gravity rules, falling back to vanilla gravity. */
+    public static Vec3 downDirection(GravityWorld world, Vec3 pos) {
+        return pull(world, pos, Double.NaN).map(Pull::down).orElse(VANILLA_DOWN);
+    }
+
     /** Vanilla-style "down" used when no field reaches a position. */
     public static final Vec3 VANILLA_DOWN = new Vec3(0, -1, 0);
 

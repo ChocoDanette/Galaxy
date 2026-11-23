@@ -103,4 +103,24 @@ class GravityMathTest {
         assertTrue(twoUp < 0.3, "two blocks up should be much lighter, was " + twoUp);
         assertTrue(belowTakeoff > 0.99, "below the take-off spot pull is full, was " + belowTakeoff);
     }
+
+    @Test
+    void spacePullDragsTowardTheNearestPlanetOnlyWhenOn() {
+        GravityField a = new GravityField(Vec3.ZERO, 10, 20, 1);
+        GravityField b = new GravityField(new Vec3(100, 0, 0), 10, 20, 1);
+        Vec3 between = new Vec3(40, 0, 0);
+        assertTrue(GravityMath.pull(GravityWorld.of(List.of(a, b)), between, Double.NaN).isEmpty());
+
+        GravityWorld space = new GravityWorld(List.of(a, b), 0.1, List.of());
+        GravityMath.Pull pull = GravityMath.pull(space, between, Double.NaN).orElseThrow();
+        assertVec(new Vec3(-1, 0, 0), pull.down());
+        assertEquals(0.1, pull.scale(), EPS);
+        assertTrue(!pull.inField());
+
+        // A home planet pulls harder and from further away.
+        GravityWorld home = new GravityWorld(List.of(a, b), 0.1, List.of(b.center()));
+        GravityMath.Pull homePull = GravityMath.pull(home, new Vec3(45, 0, 0), Double.NaN).orElseThrow();
+        assertVec(new Vec3(1, 0, 0), homePull.down());
+        assertEquals(0.15, homePull.scale(), EPS);
+    }
 }

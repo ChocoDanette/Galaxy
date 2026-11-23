@@ -21,10 +21,10 @@ public final class PlanetSync {
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar(GalaxyGravity.MODID).versioned("2").playToClient(
+        event.registrar(GalaxyGravity.MODID).versioned("3").playToClient(
                 SyncPlanetsPayload.TYPE,
                 SyncPlanetsPayload.STREAM_CODEC,
-                (payload, context) -> ClientPlanets.set(payload.fields(), payload.showRanges()));
+                (payload, context) -> ClientPlanets.set(new GravityWorld(payload.fields(), payload.spacePull(), payload.anchors()), payload.showRanges()));
     }
 
     /** Sends the planets of a dimension to everyone in it. Call after any change. */

@@ -1,10 +1,8 @@
 package io.github.chocodanette.galaxy.gravity;
 
-import java.util.List;
 import java.util.Optional;
 
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -16,8 +14,8 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 /**
  * Pulls living entities toward the planet that governs their position.
  *
- * Inside a field, vanilla gravity is switched off with an attribute modifier and replaced
- * by a pull toward the planet's center. Each entity is handled on the side that owns its
+ * Inside a field (or anywhere in a dimension with a space pull), vanilla gravity is switched
+ * off with an attribute modifier and replaced by a pull toward the planet. Each entity is handled on the side that owns its
  * movement: the server for mobs, the player's own client for players. That way both sides
  * agree in multiplayer without fighting over the entity's position.
  */
@@ -43,8 +41,10 @@ public final class GravityApplier {
             return;
         }
 
-        Optional<GravityField> field = GravityMath.governingField(fieldsFor(entity), entity.position());
-        if (field.isEmpty() || entity.isNoGravity()) {
+        GravityFrame anyFrame = GravityFrames.of(entity);
+        double takeoff = anyFrame != null ? anyFrame.takeoffDistance() : Double.NaN;
+        Optional<GravityMath.Pull> pull = GravityMath.pull(GravityFrames.worldFor(entity), entity.position(), takeoff);
+        if (pull.isEmpty() || entity.isNoGravity()) {
             gravity.removeModifier(NO_VANILLA_GRAVITY);
             return;
         }
@@ -52,14 +52,14 @@ public final class GravityApplier {
         if (!gravity.hasModifier(NO_VANILLA_GRAVITY)) {
             gravity.addTransientModifier(CANCEL_VANILLA);
         }
-        Vec3 down = GravityMath.downDirection(field.get(), entity.position(), GravityMath.VANILLA_DOWN);
-        double takeoff = Double.NaN;
-        GravityFrame anyFrame = GravityFrames.of(entity);
-        if (anyFrame != null) {
+        GravityField field = pull.get().field();
+        Vec3 down = pull.get().down();
+        double scale = pull.get().scale();
+        if (anyFrame != null && pull.get().inField()) {
             if (entity.onGround() || entity.isInLiquid() || entity.onClimbable()) {
-                anyFrame.setTakeoffDistance(field.get().distanceToSurface(entity.position()));
+                anyFrame.setTakeoffDistance(field.distanceToSurface(entity.position()));
+                scale = field.strength() * GravityMath.pullFactor(field, entity.position(), anyFrame.takeoffDistance());
             }
-            takeoff = anyFrame.takeoffDistance();
         }
         GravityFrame frame = GravityFrames.tilted(entity);
         if (frame != null && entity.onGround()) {
@@ -68,15 +68,6 @@ public final class GravityApplier {
             // part would make you slide slowly toward the middle of the face.
             down = GravityFrames.boxAxis(frame).getUnitVec3().scale(-1);
         }
-        double pull = gravity.getBaseValue() * field.get().strength()
-                * GravityMath.pullFactor(field.get(), entity.position(), takeoff);
-        entity.setDeltaMovement(entity.getDeltaMovement().add(down.scale(pull)));
-    }
-
-    private static List<GravityField> fieldsFor(LivingEntity entity) {
-        if (entity.level() instanceof ServerLevel level) {
-            return PlanetGravityData.get(level).fields();
-        }
-        return ClientPlanets.fields();
+        entity.setDeltaMovement(entity.getDeltaMovement().add(down.scale(gravity.getBaseValue() * scale)));
     }
 }
