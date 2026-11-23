@@ -84,24 +84,13 @@ class GravityMathTest {
     }
 
     @Test
-    void pullIsFullAtTheSurfaceAndFadesTowardTheEdge() {
-        GravityField planet = new GravityField(Vec3.ZERO, 20, 60, 1);
-        assertEquals(1.0, GravityMath.pullFactor(planet, new Vec3(0, 20, 0), Double.NaN), EPS);
-        assertEquals(0.25, GravityMath.pullFactor(planet, new Vec3(0, 40, 0), Double.NaN), EPS);
-        assertEquals(GravityMath.MIN_PULL_FACTOR, GravityMath.pullFactor(planet, new Vec3(0, 60, 0), Double.NaN), EPS);
-        // Inside the planet the pull stays full.
-        assertEquals(1.0, GravityMath.pullFactor(planet, new Vec3(0, 5, 0), Double.NaN), EPS);
-    }
-
-    @Test
-    void pullWeakensAboveTheTakeoffSpotOnly() {
-        GravityField planet = new GravityField(Vec3.ZERO, 20, 1000, 1);
-        double onGround = GravityMath.pullFactor(planet, new Vec3(0, 20, 0), 0.0);
-        double twoUp = GravityMath.pullFactor(planet, new Vec3(0, 22, 0), 0.0);
-        double belowTakeoff = GravityMath.pullFactor(planet, new Vec3(0, 22, 0), 5.0);
-        assertEquals(1.0, onGround, 1.0E-6);
-        assertTrue(twoUp < 0.3, "two blocks up should be much lighter, was " + twoUp);
-        assertTrue(belowTakeoff > 0.99, "below the take-off spot pull is full, was " + belowTakeoff);
+    void pullIsTheSameEverywhereOnAPlanet() {
+        GravityField planet = new GravityField(Vec3.ZERO, 20, 60, 0.8);
+        for (Vec3 pos : List.of(new Vec3(0, 20, 0), new Vec3(0, 22, 0), new Vec3(0, 40, 0), new Vec3(0, 59, 0), new Vec3(0, 5, 0))) {
+            assertEquals(1.0, GravityMath.pullFactor(planet, pos, 0.0), EPS);
+            assertEquals(0.8, GravityMath.pull(new GravityWorld(List.of(planet), 0.08, List.of()), pos, 0.0)
+                    .orElseThrow().scale(), EPS);
+        }
     }
 
     @Test

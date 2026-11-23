@@ -118,7 +118,7 @@ public final class GalaxyLayout {
             bumpiness = (0.03 + random.nextDouble() * (MAX_BUMPINESS - 0.03)) * Math.min(1.0, radius / 14.0);
         }
         double extent = cube ? radius : radius * (1.0 + bumpiness);
-        double strength = 0.8 + random.nextDouble() * 0.3;
+        double strength = 0.7 + random.nextDouble() * 0.3;
         // The arrival planet has no caves, so nobody lands in a hole.
         boolean caves = varied && radius >= MIN_CAVE_RADIUS && random.nextDouble() < 0.8;
         Vec3 center = placeInCell(random, cellX, cellZ, extent, extent, extent);
@@ -131,7 +131,7 @@ public final class GalaxyLayout {
         PlanetTheme theme = pickTheme(galaxy, random);
         double size = biasedSize(random, galaxy.sizeBias());
         double radius = MIN_HOLLOW_RADIUS + size * (MAX_SPHERE_RADIUS - MIN_HOLLOW_RADIUS);
-        double strength = 0.8 + random.nextDouble() * 0.3;
+        double strength = 0.7 + random.nextDouble() * 0.3;
         Vec3 center = placeInCell(random, cellX, cellZ, radius, radius, radius);
         return new Planet(seed, center, radius, GravityField.Shape.HOLLOW, theme, 0.0, strength, false);
     }
@@ -192,7 +192,7 @@ public final class GalaxyLayout {
             boolean big = i == 0 || i == count - 1;
             // Tiny planets take after the planet they're closest to.
             PlanetTheme theme = i < count / 2.0 ? first : last;
-            double strength = 0.8 + random.nextDouble() * 0.3;
+            double strength = 0.7 + random.nextDouble() * 0.3;
             boolean caves = big && radii[i] >= MIN_CAVE_RADIUS && random.nextDouble() < 0.7;
             planets.add(new Planet(random.nextLong(), center, radii[i], GravityField.Shape.SPHERE, theme,
                     bumps[i], strength, caves));

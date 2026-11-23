@@ -86,17 +86,28 @@ public final class GravityFrames {
         if (world.fields().isEmpty() && !entity.hasData(FRAME)) {
             return;
         }
-        Vec3 down = GravityMath.downDirection(world, entity.position());
         GravityFrame frame = entity.getData(FRAME);
+        if (frame.isFree()) {
+            // Free flight in space owns the frame (see SpaceFlight).
+            entity.resetFallDistance();
+            return;
+        }
+        Vec3 down = GravityMath.downDirection(world, entity.position());
         Direction axisBefore = boxAxis(frame);
         frame.tick(down.scale(-1));
-        Direction axisAfter = boxAxis(frame);
-        if (axisAfter != axisBefore) {
-            standUpNewBox(entity, axisAfter);
-        }
+        afterTurn(entity, axisBefore);
         if (tilted(entity) != null) {
             // Vanilla measures falls along world "down", which is wrong on a planet's side.
             entity.resetFallDistance();
+        }
+    }
+
+    /** Call after a frame turned: rebuilds the hitbox if it now stands along another axis. */
+    public static void afterTurn(LivingEntity entity, Direction axisBefore) {
+        GravityFrame frame = entity.getData(FRAME);
+        Direction axisAfter = boxAxis(frame);
+        if (axisAfter != axisBefore) {
+            standUpNewBox(entity, axisAfter);
         }
     }
 

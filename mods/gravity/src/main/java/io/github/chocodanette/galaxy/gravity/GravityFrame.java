@@ -26,6 +26,30 @@ public final class GravityFrame {
      * how high above it the entity has risen. NaN until it has touched the ground.
      */
     private double takeoffDistance = Double.NaN;
+    /**
+     * True during free flight in space: the frame follows the player's view instead of turning
+     * toward a planet.
+     */
+    private boolean free;
+
+    public boolean isFree() {
+        return free;
+    }
+
+    public void setFree(boolean free) {
+        this.free = free;
+    }
+
+    /** A copy of the current rotation. */
+    public Quaternionf currentRotation() {
+        return new Quaternionf(rotation);
+    }
+
+    /** Jumps straight to a rotation, with no turning in between (used by free flight). */
+    public void snapTo(Quaternionf target) {
+        rotation.set(target).normalize();
+        previous.set(rotation);
+    }
 
     /** Turns toward a target "up" (unit vector), at most {@link #MAX_TURN_DEGREES_PER_TICK}. */
     public void tick(Vec3 targetUp) {

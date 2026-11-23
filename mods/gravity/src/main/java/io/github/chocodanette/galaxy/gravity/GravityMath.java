@@ -52,48 +52,15 @@ public final class GravityMath {
     }
 
     /**
-     * How fast the pull weakens as you rise above the spot you left the ground from.
-     * 1.5 means half the pull at 2/3 of a block up, a quarter at 2 blocks. A normal jump goes
-     * about 2 to 3 blocks high on a galaxy planet instead of 1.
-     */
-    public static final double LIFT_FALLOFF_PER_BLOCK = 1.5;
-
-    /**
-     * The weakest the pull gets anywhere inside a field, as a share of full strength. Keeps a
-     * slow drift back to the planet right at the edge, so you don't hang there forever.
-     */
-    public static final double MIN_PULL_FACTOR = 0.03;
-
-    /**
-     * Share of the planet's full pull (0 to 1) at a position.
-     *
-     * Two things weaken it. Near the edge of the field the pull fades out smoothly, reaching
-     * almost nothing at the edge. And the higher you are above the spot you left the ground
-     * from, the weaker the pull, so jumps go high and float. Standing on the ground (or
-     * falling below your take-off spot) you get the full edge-faded pull, so walking feels
-     * normal.
+     * Share of the planet's full pull (0 to 1) at a position. For now gravity is the same
+     * everywhere inside a planet's range, so walking and jumping feel like the overworld (with
+     * the planet's own strength). A later "high jump" action will lower it to take off.
      *
      * @param takeoffDistance the {@link GravityField#distanceToSurface} of the spot the entity
-     *                        last stood on, or NaN when unknown
+     *                        last stood on, or NaN when unknown (kept for the high jump)
      */
     public static double pullFactor(GravityField field, Vec3 pos, double takeoffDistance) {
-        double distance = field.distanceToSurface(pos);
-        double band = field.range() - field.radius();
-        double edge = 1.0;
-        if (band > MIN_DISTANCE) {
-            double t = clamp01(distance / band);
-            edge = (1.0 - t) * (1.0 - t);
-        }
-        double lift = 1.0;
-        if (!Double.isNaN(takeoffDistance)) {
-            double height = Math.max(0.0, distance - takeoffDistance);
-            lift = 1.0 / (1.0 + LIFT_FALLOFF_PER_BLOCK * height);
-        }
-        return Math.max(MIN_PULL_FACTOR, edge * lift);
-    }
-
-    private static double clamp01(double value) {
-        return Math.max(0.0, Math.min(1.0, value));
+        return 1.0;
     }
 
     /** How much harder a home planet pulls from space than other planets. */

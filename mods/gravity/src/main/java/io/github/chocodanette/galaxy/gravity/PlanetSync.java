@@ -21,10 +21,21 @@ public final class PlanetSync {
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar(GalaxyGravity.MODID).versioned("4").playToClient(
+        var registrar = event.registrar(GalaxyGravity.MODID).versioned("5");
+        registrar.playToClient(
                 SyncPlanetsPayload.TYPE,
                 SyncPlanetsPayload.STREAM_CODEC,
                 (payload, context) -> ClientPlanets.set(new GravityWorld(payload.fields(), payload.spacePull(), payload.anchors()), payload.showRanges()));
+        registrar.playBidirectional(
+                FlightFramePayload.TYPE,
+                FlightFramePayload.STREAM_CODEC,
+                (payload, context) -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        SpaceFlight.onFromPlayer(player, payload);
+                    } else {
+                        SpaceFlight.onFromServer(context.player().level(), payload);
+                    }
+                });
     }
 
     /** Sends the planets of a dimension to everyone in it. Call after any change. */

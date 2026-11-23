@@ -52,6 +52,10 @@ public final class GravityApplier {
         if (!gravity.hasModifier(NO_VANILLA_GRAVITY)) {
             gravity.addTransientModifier(CANCEL_VANILLA);
         }
+        if (SpaceFlight.isFreeFlying(entity)) {
+            // Free flight in space: nothing pulls you (vanilla gravity stays off too).
+            return;
+        }
         GravityField field = pull.get().field();
         Vec3 down = pull.get().down();
         double scale = pull.get().scale();
