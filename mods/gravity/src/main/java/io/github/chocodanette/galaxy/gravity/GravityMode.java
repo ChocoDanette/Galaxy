@@ -21,9 +21,16 @@ public enum GravityMode implements StringRepresentable {
     GROUND("ground"),
     /**
      * The planet's own pull: toward a sphere's center, straight into a cube's face (turning
-     * only near its edges). The default.
+     * only near its edges).
      */
-    CENTER("center");
+    CENTER("center"),
+    /**
+     * Always straight into a block face: the one of the 6 directions closest to the planet's
+     * pull. On the round parts of a planet you stand on flat step tops with a normal "down",
+     * and gravity turns 90 degrees where the surface crosses the diagonal (a little past it, so
+     * it doesn't flip back and forth). The default.
+     */
+    STEPS("steps");
 
     public static final Codec<GravityMode> CODEC = StringRepresentable.fromEnum(GravityMode::values);
     public static final StreamCodec<ByteBuf, GravityMode> STREAM_CODEC =

@@ -137,6 +137,15 @@ public final class GravityFrames {
     private static Vec3 upFor(LivingEntity entity, GravityWorld world, GravityFrame frame) {
         Vec3 planetUp = GravityMath.downDirection(world, entity.position()).scale(-1);
         int offGround = frame.updateGround(entity.onGround());
+        if (world.mode() == GravityMode.STEPS) {
+            if (GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
+                frame.setStepUp(null);
+                return planetUp;
+            }
+            Direction step = GravityMath.stepUp(planetUp, frame.stepUp());
+            frame.setStepUp(step);
+            return step.getUnitVec3();
+        }
         if (world.mode() != GravityMode.GROUND || offGround > GROUND_GRACE_TICKS
                 || GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
             return planetUp;

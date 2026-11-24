@@ -124,4 +124,24 @@ public final class GravityMath {
                 .map(field -> downDirection(field, pos, VANILLA_DOWN))
                 .orElse(VANILLA_DOWN);
     }
+
+    /** How far past the diagonal (in degrees) "up" must get before step gravity switches face. */
+    public static final double STEP_SWITCH_MARGIN_DEGREES = 8.0;
+
+    /**
+     * Step gravity: the block direction "up" points along, for a planet's true up. Keeps the
+     * current direction until the true up is clearly closer to another one (past the
+     * diagonal by {@link #STEP_SWITCH_MARGIN_DEGREES}), so it doesn't flip back and forth.
+     *
+     * @param trueUp  unit "up" from the planet's pull
+     * @param current the direction used so far, or null
+     */
+    public static net.minecraft.core.Direction stepUp(Vec3 trueUp, net.minecraft.core.Direction current) {
+        net.minecraft.core.Direction nearest = net.minecraft.core.Direction.getApproximateNearest(trueUp.x, trueUp.y, trueUp.z);
+        if (current == null || current == nearest) {
+            return nearest;
+        }
+        double keep = Math.cos(Math.toRadians(45.0 + STEP_SWITCH_MARGIN_DEGREES));
+        return trueUp.dot(current.getUnitVec3()) >= keep ? current : nearest;
+    }
 }
