@@ -64,8 +64,13 @@ public final class GalaxyView {
 
     /** Rebuilds the model when the galaxy below the station has changed. */
     static void refresh(MinecraftServer server) {
+        refresh(server, false);
+    }
+
+    /** Same, and also when {@code missing} says the model isn't there any more. */
+    static void refresh(MinecraftServer server, boolean missing) {
         StationData data = StationData.get(server);
-        if (data.viewGalaxy() != data.galaxy()) {
+        if (missing || data.viewGalaxy() != data.galaxy()) {
             rebuild(server);
         }
     }

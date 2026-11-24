@@ -52,7 +52,8 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
 
     /** Farthest anything of this planet reaches, trees included. */
     public double reach() {
-        return extent() + (hasTrees() ? Trees.MAX_HEIGHT : 0.0);
+        // Trees and Launch Blooms both stay within this height above the ground.
+        return extent() + Trees.MAX_HEIGHT;
     }
 
     /** How far the gravity reaches from the center: a bit more for bigger planets. */

@@ -122,6 +122,24 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
                 chunk.setBlockState(cursor, treeState(tree));
             }
         }
+        // Launch Blooms last: they're tall and must stay whole, so they replace anything but the planet itself.
+        for (Planet planet : planets) {
+            Blooms.bloom(randomState.seed(), planet).ifPresent(bloom -> {
+                for (Blooms.Block block : bloom.blocks()) {
+                    BlockPos p = block.pos();
+                    if (p.getX() < minX || p.getX() > maxX || p.getZ() < minZ || p.getZ() > maxZ
+                            || p.getY() < bottom || p.getY() > top
+                            || planet.materialAt(p.getX(), p.getY(), p.getZ()) != null) {
+                        continue;
+                    }
+                    BlockState state = PlanetBlocks.bloomBlock(block.part()).defaultBlockState();
+                    if (state.hasProperty(RotatedPillarBlock.AXIS)) {
+                        state = state.setValue(RotatedPillarBlock.AXIS, block.up().getAxis());
+                    }
+                    chunk.setBlockState(cursor.set(p.getX(), p.getY(), p.getZ()), state);
+                }
+            });
+        }
         return CompletableFuture.completedFuture(chunk);
     }
 

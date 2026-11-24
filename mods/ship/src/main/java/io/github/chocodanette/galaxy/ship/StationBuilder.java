@@ -58,12 +58,13 @@ public final class StationBuilder {
             GalaxyShip.LOGGER.error("The station dimension isn't loaded; the station can't be built");
             return;
         }
-        if (!data.upToDate()) {
+        // Also rebuild when the deck is missing (the station dimension was reset).
+        if (!data.upToDate() || station.getBlockState(StationLocation.ORIGIN.below()).isAir()) {
             build(station);
             data.setBuilt();
             GalaxyShip.LOGGER.info("Built the crew's station");
         }
-        GalaxyView.refresh(server);
+        GalaxyView.refresh(server, station.getBlockState(StationLocation.VIEW_CENTER).isAir());
     }
 
     /** Places (or puts back) the whole station. */
