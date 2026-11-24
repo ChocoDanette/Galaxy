@@ -35,6 +35,7 @@ public final class GalaxyWorldgen {
     public GalaxyWorldgen(IEventBus modEventBus, ModContainer modContainer) {
         CHUNK_GENERATORS.register(modEventBus);
         PlanetBlocks.register(modEventBus);
+        BloomRides.register(modEventBus);
         PlanetGravityLink.register();
         GalaxyCommands.register();
         LOGGER.info("Galaxy Generation loaded");

@@ -36,6 +36,17 @@ public final class GravityFrame {
     /** Ticks since the entity last stood on something. */
     private int ticksOffGround = 1000;
 
+    /** Block direction "up" points along in step gravity (null until first used). */
+    private net.minecraft.core.Direction stepUp;
+
+    public net.minecraft.core.Direction stepUp() {
+        return stepUp;
+    }
+
+    public void setStepUp(net.minecraft.core.Direction stepUp) {
+        this.stepUp = stepUp;
+    }
+
     /** Ticks spent crouching on a planet, for the charged jump (see {@link Launch}). */
     private int chargeTicks;
     /** True from a charged jump until landing: half pull, little air drag. */

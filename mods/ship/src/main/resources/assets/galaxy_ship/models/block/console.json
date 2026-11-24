@@ -1,8 +1,0 @@
-{
-  "parent": "minecraft:block/cube_bottom_top",
-  "textures": {
-    "top": "galaxy_ship:block/console_top",
-    "side": "galaxy_ship:block/console_side",
-    "bottom": "galaxy_ship:block/console_bottom"
-  }
-}

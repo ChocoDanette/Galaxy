@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "galaxy_worldgen:block/bloom_stem",
+      "x": 90,
+      "y": 90
+    },
+    "axis=y": {
+      "model": "galaxy_worldgen:block/bloom_stem"
+    },
+    "axis=z": {
+      "model": "galaxy_worldgen:block/bloom_stem",
+      "x": 90
+    }
+  }
+}

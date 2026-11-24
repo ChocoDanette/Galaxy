@@ -3,6 +3,7 @@ package io.github.chocodanette.galaxy.worldgen;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
@@ -33,7 +34,24 @@ public final class PlanetBlocks {
     public static final DeferredBlock<PlanetPlantBlock> STARBLOOM = BLOCKS.registerBlock("starbloom",
             PlanetPlantBlock::new, PlanetBlocks::plant);
 
+    // Launch Bloom parts (see Blooms). They can't be broken in survival, so links stay usable.
+    public static final DeferredBlock<RotatedPillarBlock> BLOOM_STEM = BLOCKS.registerBlock("bloom_stem",
+            RotatedPillarBlock::new, props -> bloom(props, MapColor.COLOR_GREEN, 0));
+    public static final DeferredBlock<Block> BLOOM_LEAF = BLOCKS.registerSimpleBlock("bloom_leaf",
+            props -> bloom(props, MapColor.PLANT, 0));
+    public static final DeferredBlock<BloomPadBlock> BLOOM_PAD = BLOCKS.registerBlock("bloom_pad",
+            BloomPadBlock::new, props -> bloom(props, MapColor.COLOR_LIGHT_GREEN, 10));
+    public static final DeferredBlock<Block> BLOOM_PETAL = BLOCKS.registerSimpleBlock("bloom_petal",
+            props -> bloom(props, MapColor.COLOR_PINK, 0));
+    public static final DeferredBlock<Block> BLOOM_CORE = BLOCKS.registerSimpleBlock("bloom_core",
+            props -> bloom(props, MapColor.COLOR_YELLOW, 14));
+
     static {
+        ITEMS.registerSimpleBlockItem(BLOOM_STEM);
+        ITEMS.registerSimpleBlockItem(BLOOM_LEAF);
+        ITEMS.registerSimpleBlockItem(BLOOM_PAD);
+        ITEMS.registerSimpleBlockItem(BLOOM_PETAL);
+        ITEMS.registerSimpleBlockItem(BLOOM_CORE);
         ITEMS.registerSimpleBlockItem(PLANET_TURF);
         ITEMS.registerSimpleBlockItem(FUNGAL_TURF);
         ITEMS.registerSimpleBlockItem(PLANET_GRASS);
@@ -48,6 +66,22 @@ public final class PlanetBlocks {
                 .sound(SoundType.GRASS).pushReaction(PushReaction.POPPED);
     }
 
+    private static Block.Properties bloom(Block.Properties props, MapColor color, int light) {
+        return props.mapColor(color).strength(-1.0F, 3_600_000.0F).noLootTable()
+                .lightLevel(state -> light).sound(SoundType.MOSS).pushReaction(PushReaction.IMMOVEABLE);
+    }
+
+    /** The block a Launch Bloom part is made of. */
+    public static Block bloomBlock(Blooms.Part part) {
+        return switch (part) {
+            case STEM -> BLOOM_STEM.get();
+            case LEAF -> BLOOM_LEAF.get();
+            case PAD -> BLOOM_PAD.get();
+            case PETAL -> BLOOM_PETAL.get();
+            case CORE -> BLOOM_CORE.get();
+        };
+    }
+
     static void register(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
@@ -60,6 +94,11 @@ public final class PlanetBlocks {
             event.accept(FUNGAL_TURF.get());
             event.accept(PLANET_GRASS.get());
             event.accept(STARBLOOM.get());
+            event.accept(BLOOM_STEM.get());
+            event.accept(BLOOM_LEAF.get());
+            event.accept(BLOOM_PAD.get());
+            event.accept(BLOOM_PETAL.get());
+            event.accept(BLOOM_CORE.get());
         }
     }
 }

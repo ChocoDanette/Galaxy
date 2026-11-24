@@ -169,4 +169,34 @@ class GravityMathTest {
             previous = down;
         }
     }
+
+    @Test
+    void stepGravityPicksTheNearestFaceAndWaitsPastTheDiagonal() {
+        net.minecraft.core.Direction up = null;
+        // Walking over a round edge from the top to the east side: up turns from +y to +x.
+        for (int degrees = 0; degrees <= 90; degrees++) {
+            double a = Math.toRadians(degrees);
+            up = GravityMath.stepUp(new Vec3(Math.sin(a), Math.cos(a), 0), up);
+            if (degrees < 45 + GravityMath.STEP_SWITCH_MARGIN_DEGREES) {
+                assertEquals(net.minecraft.core.Direction.UP, up, "switched too early at " + degrees);
+            }
+        }
+        assertEquals(net.minecraft.core.Direction.EAST, up);
+        // Walking back, it holds the side until well past the diagonal the other way.
+        for (int degrees = 90; degrees >= 0; degrees--) {
+            double a = Math.toRadians(degrees);
+            up = GravityMath.stepUp(new Vec3(Math.sin(a), Math.cos(a), 0), up);
+            if (degrees > 45 - GravityMath.STEP_SWITCH_MARGIN_DEGREES) {
+                assertEquals(net.minecraft.core.Direction.EAST, up, "switched back too early at " + degrees);
+            }
+        }
+        assertEquals(net.minecraft.core.Direction.UP, up);
+        // Standing still on the diagonal never flips.
+        Vec3 diagonal = new Vec3(1, 1, 0).normalize();
+        net.minecraft.core.Direction held = net.minecraft.core.Direction.UP;
+        for (int i = 0; i < 10; i++) {
+            held = GravityMath.stepUp(diagonal, held);
+            assertEquals(net.minecraft.core.Direction.UP, held);
+        }
+    }
 }

@@ -24,12 +24,12 @@ public final class PlanetGravityData extends SavedData {
             Codec.BOOL.optionalFieldOf("show_ranges", true).forGetter(data -> data.showRanges),
             Codec.DOUBLE.optionalFieldOf("space_pull", 0.0).forGetter(data -> data.spacePull),
             Vec3.CODEC.listOf().optionalFieldOf("anchors", List.of()).forGetter(data -> data.anchors),
-            GravityMode.CODEC.optionalFieldOf("gravity_mode", GravityMode.CENTER).forGetter(data -> data.mode)
+            GravityMode.CODEC.optionalFieldOf("gravity_mode_v2", GravityMode.STEPS).forGetter(data -> data.mode)
     ).apply(i, PlanetGravityData::new));
 
     /** Reads saves from before center markers (a plain list of planets) as well. */
     public static final Codec<PlanetGravityData> CODEC = Codec.either(FULL_CODEC, GravityField.CODEC.listOf())
-            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true, true, 0.0, List.of(), GravityMode.CENTER)), Either::left);
+            .xmap(either -> either.map(data -> data, list -> new PlanetGravityData(list, true, true, 0.0, List.of(), GravityMode.STEPS)), Either::left);
 
     public static final SavedDataType<PlanetGravityData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(GalaxyGravity.MODID, "planets"),
@@ -43,7 +43,7 @@ public final class PlanetGravityData extends SavedData {
     private GravityMode mode;
 
     public PlanetGravityData() {
-        this(List.of(), true, true, 0.0, List.of(), GravityMode.CENTER);
+        this(List.of(), true, true, 0.0, List.of(), GravityMode.STEPS);
     }
 
     private PlanetGravityData(List<GravityField> fields, boolean showCenters, boolean showRanges,

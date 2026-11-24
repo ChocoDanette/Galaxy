@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "galaxy_worldgen:block/bloom_pad"
+    }
+  }
+}

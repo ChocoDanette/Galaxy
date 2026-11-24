@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "galaxy_worldgen:block/bloom_stem_top",
+    "side": "galaxy_worldgen:block/bloom_stem"
+  }
+}

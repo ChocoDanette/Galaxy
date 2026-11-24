@@ -1,0 +1,12 @@
+{
+  "type": "galaxy_ship:station",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "galaxy_worldgen:space",
+      "features": false,
+      "lakes": false,
+      "layers": []
+    }
+  }
+}
