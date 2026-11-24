@@ -84,11 +84,50 @@ public final class GravityMath {
      * @param takeoffDistance see {@link #pullFactor}; NaN for things that don't jump
      */
     public static Optional<Pull> pull(GravityWorld world, Vec3 pos, double takeoffDistance) {
-        Optional<GravityField> governing = governingField(world.fields(), pos);
-        if (governing.isPresent()) {
-            GravityField field = governing.get();
-            return Optional.of(new Pull(downDirection(field, pos, VANILLA_DOWN),
-                    field.strength() * pullFactor(field, pos, takeoffDistance), field, true));
+        return pull(world, pos, takeoffDistance, null);
+    }
+
+    /** How sharply a closer planet wins over a farther one where ranges overlap. */
+    static final double BLEND_POWER = 4.0;
+    /** Extra weight the planet you're already on keeps, so you don't flip back and forth. */
+    static final double HOLD_WEIGHT = 2.0;
+    /** A range's pull fades in over this many blocks from its edge, where ranges overlap. */
+    static final double EDGE_FADE = 4.0;
+
+    /**
+     * Same, remembering which planet the entity was on. Where two ranges overlap, the pulls
+     * blend: the closer planet counts much more (by distance to its surface), and a range's
+     * pull fades in from its edge, so "down" swings round smoothly from one planet to the other
+     * instead of snapping. Right between two planets facing each other the pulls cancel and
+     * down flips, but the planet you came from keeps a little extra weight
+     * ({@link #HOLD_WEIGHT}) so it only flips once you're past the middle.
+     *
+     * @param holdCenter center of the planet the entity was pulled by last, or null
+     */
+    public static Optional<Pull> pull(GravityWorld world, Vec3 pos, double takeoffDistance, Vec3 holdCenter) {
+        Vec3 sum = Vec3.ZERO;
+        double totalWeight = 0;
+        double strength = 0;
+        GravityField dominant = null;
+        double dominantWeight = -1;
+        for (GravityField field : world.fields()) {
+            if (!field.contains(pos)) {
+                continue;
+            }
+            double weight = blendWeight(field, pos, holdCenter);
+            Vec3 down = downDirection(field, pos, VANILLA_DOWN);
+            sum = sum.add(down.scale(weight));
+            totalWeight += weight;
+            strength += weight * field.strength() * pullFactor(field, pos, takeoffDistance);
+            if (weight > dominantWeight) {
+                dominantWeight = weight;
+                dominant = field;
+            }
+        }
+        if (dominant != null) {
+            Vec3 down = sum.length() > 1.0E-6 * totalWeight ? sum.normalize()
+                    : downDirection(dominant, pos, VANILLA_DOWN);
+            return Optional.of(new Pull(down, strength / totalWeight, dominant, true));
         }
         if (world.spacePull() <= 0) {
             return Optional.empty();
@@ -108,6 +147,22 @@ public final class GravityMath {
         double boost = world.isAnchor(best) ? ANCHOR_BOOST : 1.0;
         return Optional.of(new Pull(downDirection(best, pos, VANILLA_DOWN),
                 world.spacePull() * best.strength() * boost, best, false));
+    }
+
+    /** How much one planet counts in a blend (see {@link #pull(GravityWorld, Vec3, double, Vec3)}). */
+    static double blendWeight(GravityField field, Vec3 pos, Vec3 holdCenter) {
+        double distance = Math.max(0.0, Math.abs(field.distanceToSurface(pos)));
+        double weight = 1.0 / Math.pow(distance + 1.0, BLEND_POWER);
+        double edge = (field.range() - pos.distanceTo(field.center())) / EDGE_FADE;
+        if (edge < 1.0) {
+            double t = Math.max(0.0, edge);
+            // Never quite zero, so a lone range still pulls right up to its edge.
+            weight *= Math.max(1.0E-4, t * t * (3 - 2 * t));
+        }
+        if (holdCenter != null && holdCenter.equals(field.center())) {
+            weight *= HOLD_WEIGHT;
+        }
+        return weight;
     }
 
     /** Down direction under a dimension's gravity rules, falling back to vanilla gravity. */

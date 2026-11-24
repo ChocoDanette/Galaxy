@@ -26,6 +26,9 @@ import io.github.chocodanette.galaxy.gravity.SpaceFlight;
  * you look, and you can keep turning past straight up into a loop. W flies where you look,
  * jump and sneak go along your own up and down.
  *
+ * The same happens while drifting between planets outside every range, so the view is free
+ * there; once you fall into a range the planet turns you upright again.
+ *
  * Runs before the normal frame update, which then leaves a free frame alone.
  */
 @EventBusSubscriber(modid = GalaxyGravity.MODID, value = Dist.CLIENT)
@@ -39,7 +42,7 @@ public final class SpaceFlightClient {
             return;
         }
         GravityFrame frame = player.getData(GravityFrames.FRAME);
-        if (!SpaceFlight.isFreeFlying(player)) {
+        if (!SpaceFlight.hasFreeView(player)) {
             if (frame.isFree()) {
                 frame.setFree(false);
                 ClientPacketDistributor.sendToServer(new FlightFramePayload(player.getId(), false, frame.currentRotation()));

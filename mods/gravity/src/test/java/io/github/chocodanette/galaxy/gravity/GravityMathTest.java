@@ -199,4 +199,37 @@ class GravityMathTest {
             assertEquals(net.minecraft.core.Direction.UP, held);
         }
     }
+
+    @Test
+    void overlappingRangesBlendSmoothlyFromOnePlanetToTheOther() {
+        // Two planets side by side, ranges overlapping. Walk a line past both: down never jumps.
+        GravityField a = new GravityField(Vec3.ZERO, 10, 30, 1);
+        GravityField b = new GravityField(new Vec3(40, 0, 0), 10, 30, 1);
+        GravityWorld world = GravityWorld.of(List.of(a, b));
+        Vec3 last = null;
+        for (double x = 0; x <= 40; x += 0.25) {
+            Vec3 down = GravityMath.pull(world, new Vec3(x, 15, 0), Double.NaN).orElseThrow().down();
+            if (last != null) {
+                double turn = Math.toDegrees(Math.acos(Math.min(1, last.dot(down))));
+                assertTrue(turn < 6, "down jumped by " + turn + " degrees at x=" + x);
+            }
+            last = down;
+        }
+        // Next to a planet, it is its own pull.
+        assertVec(new Vec3(0, -1, 0), GravityMath.pull(world, new Vec3(0, 11, 0), Double.NaN).orElseThrow().down());
+    }
+
+    @Test
+    void thePlanetYouCameFromHoldsYouUntilPastTheMiddle() {
+        // Two planets facing each other: down flips between them, a little past halfway.
+        GravityField a = new GravityField(Vec3.ZERO, 5, 15, 1);
+        GravityField b = new GravityField(new Vec3(0, 20, 0), 5, 15, 1);
+        GravityWorld world = GravityWorld.of(List.of(a, b));
+        Vec3 justPast = new Vec3(0, 10.2, 0);
+        assertEquals(b, GravityMath.pull(world, justPast, Double.NaN).orElseThrow().field());
+        GravityMath.Pull held = GravityMath.pull(world, justPast, Double.NaN, a.center()).orElseThrow();
+        assertEquals(a, held.field());
+        assertVec(new Vec3(0, -1, 0), held.down());
+        assertEquals(b, GravityMath.pull(world, new Vec3(0, 11.5, 0), Double.NaN, a.center()).orElseThrow().field());
+    }
 }

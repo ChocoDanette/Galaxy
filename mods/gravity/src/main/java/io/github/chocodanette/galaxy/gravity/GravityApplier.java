@@ -43,7 +43,8 @@ public final class GravityApplier {
 
         GravityFrame anyFrame = GravityFrames.of(entity);
         double takeoff = anyFrame != null ? anyFrame.takeoffDistance() : Double.NaN;
-        Optional<GravityMath.Pull> pull = GravityMath.pull(GravityFrames.worldFor(entity), entity.position(), takeoff);
+        Optional<GravityMath.Pull> pull = GravityMath.pull(GravityFrames.worldFor(entity), entity.position(), takeoff,
+                anyFrame != null ? anyFrame.holdCenter() : null);
         if (pull.isEmpty() || entity.isNoGravity()) {
             gravity.removeModifier(NO_VANILLA_GRAVITY);
             return;
