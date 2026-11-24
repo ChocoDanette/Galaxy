@@ -1,1 +1,4 @@
-{}
+{
+  "message.galaxy_gravity.hop_ready": "Hop ready: jump to hop where you look",
+  "message.galaxy_gravity.launch_ready": "Launch ready: jump to take off where you look"
+}

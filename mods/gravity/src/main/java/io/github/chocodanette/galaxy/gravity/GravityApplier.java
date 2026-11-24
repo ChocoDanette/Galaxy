@@ -76,6 +76,10 @@ public final class GravityApplier {
             // part would make you slide slowly toward the middle of the face.
             down = GravityFrames.boxAxis(frame).getUnitVec3().scale(-1);
         }
+        if (anyFrame != null && anyFrame.isLaunched()) {
+            // Flying after a charged jump: half the pull, so you can leave the planet.
+            scale *= Launch.PULL_SHARE;
+        }
         entity.setDeltaMovement(entity.getDeltaMovement().add(down.scale(gravity.getBaseValue() * scale)));
     }
 }

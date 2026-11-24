@@ -9,6 +9,7 @@
     "LivingEntityMixin",
     "PlacementMixin",
     "PlayerMixin",
+    "ServerGamePacketListenerImplMixin",
     "UseOnContextMixin"
   ],
   "client": [

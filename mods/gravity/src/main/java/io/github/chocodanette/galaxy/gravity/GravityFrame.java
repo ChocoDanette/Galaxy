@@ -36,6 +36,29 @@ public final class GravityFrame {
     /** Ticks since the entity last stood on something. */
     private int ticksOffGround = 1000;
 
+    /** Ticks spent crouching on a planet, for the charged jump (see {@link Launch}). */
+    private int chargeTicks;
+    /** True from a charged jump until landing: half pull, little air drag. */
+    private boolean launched;
+
+    /** Counts crouch ticks while charging, back to 0 otherwise. Returns the new count. */
+    public int updateCharge(boolean charging) {
+        chargeTicks = charging ? Math.min(chargeTicks + 1, 1000) : 0;
+        return chargeTicks;
+    }
+
+    public int chargeTicks() {
+        return chargeTicks;
+    }
+
+    public boolean isLaunched() {
+        return launched;
+    }
+
+    public void setLaunched(boolean launched) {
+        this.launched = launched;
+    }
+
     public Vec3 gravityDown() {
         return gravityDown;
     }

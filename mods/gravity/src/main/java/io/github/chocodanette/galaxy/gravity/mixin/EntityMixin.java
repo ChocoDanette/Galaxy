@@ -26,6 +26,7 @@ import org.jspecify.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import io.github.chocodanette.galaxy.gravity.GravityFrame;
@@ -220,8 +221,17 @@ public abstract class EntityMixin {
         if (pull.isEmpty()) {
             return;
         }
-        galaxy$itemPull = pull.get();
-        setDeltaMovement(getDeltaMovement().add(pull.get().down().scale(gravity * pull.get().scale())));
+        GravityMath.Pull itemPull = pull.get();
+        if (self.onGround() && itemPull.inField()) {
+            // Resting on a block, pull straight into the block face it lies on. Near a cube's
+            // edge the true pull is slanted, and its sideways part would slide the item off
+            // the block and down the side (players get the same fix in GravityApplier).
+            Vec3 d = itemPull.down();
+            Vec3 face = Direction.getApproximateNearest(d.x, d.y, d.z).getUnitVec3();
+            itemPull = new GravityMath.Pull(face, itemPull.scale(), itemPull.field(), true);
+        }
+        galaxy$itemPull = itemPull;
+        setDeltaMovement(getDeltaMovement().add(itemPull.down().scale(gravity * itemPull.scale())));
         ci.cancel();
     }
 
@@ -247,6 +257,15 @@ public abstract class EntityMixin {
         double into = getDeltaMovement().dot(down);
         if (into > 0) {
             setDeltaMovement(getDeltaMovement().subtract(down.scale(into)));
+        }
+        if (self instanceof ItemEntity) {
+            // Vanilla ground friction only slows world x and z, so on a planet's side an item
+            // would keep sliding along world y. Slow it along the face it lies on instead.
+            BlockPos under = BlockPos.containing(position().add(down.scale(0.5)));
+            float slip = self.level().getBlockState(under).getFriction(self.level(), under, self);
+            Vec3 movement = getDeltaMovement();
+            Vec3 along = movement.subtract(down.scale(movement.dot(down)));
+            setDeltaMovement(movement.subtract(along.scale(1.0 - slip)));
         }
         if (self instanceof FallingBlockEntity falling && self.level() instanceof ServerLevel level && falling.isAlive()) {
             BlockPos pos = self.blockPosition();
