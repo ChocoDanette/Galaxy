@@ -26,9 +26,18 @@ class GravityFrameTest {
         Vec3 east = new Vec3(1, 0, 0);
         frame.tick(east);
         assertTrue(frame.isTilted());
-        assertEquals(GravityFrame.MAX_TURN_DEGREES_PER_TICK, angleDegrees(new Vec3(0, 1, 0), frame.up()), 0.01);
-        for (int i = 0; i < 20; i++) {
+        // It starts gently and speeds up, never past the top speed.
+        assertEquals(GravityFrame.TURN_ACCELERATION_DEGREES, angleDegrees(new Vec3(0, 1, 0), frame.up()), 0.01);
+        double last = 0;
+        for (int i = 0; i < 40; i++) {
+            Vec3 before = frame.up();
             frame.tick(east);
+            double step = angleDegrees(before, frame.up());
+            assertTrue(step <= GravityFrame.MAX_TURN_DEGREES_PER_TICK + 0.01);
+            if (i < 3) {
+                assertTrue(step > last, "should speed up at first");
+            }
+            last = step;
         }
         assertEquals(0.0, angleDegrees(east, frame.up()), 0.01);
     }

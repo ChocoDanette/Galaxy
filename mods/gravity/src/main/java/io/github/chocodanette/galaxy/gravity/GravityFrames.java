@@ -99,7 +99,15 @@ public final class GravityFrames {
         Vec3 up = upFor(entity, world, frame);
         frame.setGravityDown(up.scale(-1));
         Direction axisBefore = boxAxis(frame);
+        org.joml.Quaternionf before = frame.currentRotation();
         frame.tick(up, facing(entity, frame));
+        if (boxAxis(frame) != axisBefore && !hasRoomToTurn(entity, boxAxis(frame))) {
+            // Turning now would push the hitbox into rock: wait until there's room.
+            frame.undoTurn();
+        }
+        if (!before.equals(frame.currentRotation(), 1.0E-6F) && KEEPS_LOOK.test(entity)) {
+            keepLook(entity, before, frame.currentRotation());
+        }
         float yawChange = frame.settleTwist();
         if (yawChange != 0.0F && entity.isLocalInstanceAuthoritative()) {
             turnYaw(entity, yawChange);
@@ -126,6 +134,83 @@ public final class GravityFrames {
         }
     }
 
+    /**
+     * True for entities whose view should stay on the same spot while their frame turns (the
+     * "steady camera" option for your own player; set by the client).
+     */
+    public static java.util.function.Predicate<LivingEntity> KEEPS_LOOK = entity -> false;
+
+    /**
+     * Changes yaw and pitch so the entity keeps looking at the same spot while its frame turns
+     * from {@code before} to {@code after}: the world turns around the view instead of the
+     * view sweeping with the body.
+     */
+    private static void keepLook(LivingEntity entity, org.joml.Quaternionf before, org.joml.Quaternionf after) {
+        float yaw = entity.getYRot() * net.minecraft.util.Mth.DEG_TO_RAD;
+        float pitch = entity.getXRot() * net.minecraft.util.Mth.DEG_TO_RAD;
+        org.joml.Vector3f look = new org.joml.Vector3f(
+                -net.minecraft.util.Mth.sin(yaw) * net.minecraft.util.Mth.cos(pitch),
+                -net.minecraft.util.Mth.sin(pitch),
+                net.minecraft.util.Mth.cos(yaw) * net.minecraft.util.Mth.cos(pitch));
+        before.transform(look);
+        after.transformInverse(look);
+        float newYaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
+        float newPitch = (float) Math.toDegrees(Math.asin(Math.max(-1.0F, Math.min(1.0F, -look.y))));
+        float yawChange = net.minecraft.util.Mth.wrapDegrees(newYaw - entity.getYRot());
+        if (Math.abs(newPitch) > 89.5F) {
+            // Looking straight up or down: yaw is meaningless there, keep it.
+            yawChange = 0.0F;
+        }
+        entity.setYRot(entity.getYRot() + yawChange);
+        entity.setYHeadRot(entity.getYHeadRot() + yawChange);
+        entity.yBodyRot += yawChange;
+        entity.setXRot(Math.max(-90.0F, Math.min(90.0F, newPitch)));
+    }
+
+    /**
+     * True if a hitbox stood along this axis fits here, or one lift (at most a block along the
+     * new "up") makes it fit.
+     */
+    private static boolean hasRoomToTurn(LivingEntity entity, Direction axis) {
+        net.minecraft.world.entity.EntityDimensions size = entity.getDimensions(entity.getPose());
+        Vec3 up = axis.getUnitVec3();
+        for (int i = 0; i <= 10; i++) {
+            AABB box = orientedBox(axis, size.width(), size.height(), entity.position().add(up.scale(i * 0.1)));
+            if (entity.level().noCollision(entity, box.deflate(1.0E-7))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** How far under a planet's surface you count as underground, in blocks. */
+    private static final double UNDERGROUND_DEPTH = 1.0;
+    /** How far above your head we look for a cave roof, in blocks. */
+    private static final int ROOF_SEARCH = 16;
+
+    /**
+     * True in a cave: under the planet's surface with rock above your head. Hollow planets
+     * don't count (their tunnels and insides have their own gravity, which must turn).
+     */
+    private static boolean underground(LivingEntity entity, GravityFrame frame, GravityField field) {
+        if (field.shape() == GravityField.Shape.HOLLOW || field.floats()
+                || field.distanceToSurface(entity.position()) > -UNDERGROUND_DEPTH) {
+            return false;
+        }
+        Vec3 up = frame.up();
+        Vec3 head = entity.position().add(up.scale(entity.getBbHeight()));
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        Level level = entity.level();
+        for (int i = 0; i < ROOF_SEARCH; i++) {
+            Vec3 at = head.add(up.scale(i));
+            cursor.set(Math.floor(at.x), Math.floor(at.y), Math.floor(at.z));
+            if (!level.getBlockState(cursor).getCollisionShape(level, cursor).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Ticks after leaving the ground during which "up" still follows the ground. */
     private static final int GROUND_GRACE_TICKS = 3;
 
@@ -148,6 +233,15 @@ public final class GravityFrames {
             // Floating round a gateway planet: turn smoothly with it, no steps.
             frame.setStepUp(null);
             return planetUp;
+        }
+        if (pull.isPresent() && pull.get().inField() && underground(entity, frame, pull.get().field())) {
+            // In a cave, gravity stays put, like overworld caves, whatever the tunnel does.
+            Direction step = frame.stepUp() != null ? frame.stepUp() : boxAxis(frame);
+            frame.setStepUp(step);
+            return step.getUnitVec3();
+        }
+        if (world.mode() != GravityMode.STEPS) {
+            frame.setStepUp(null);
         }
         if (world.mode() == GravityMode.STEPS) {
             if (GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
