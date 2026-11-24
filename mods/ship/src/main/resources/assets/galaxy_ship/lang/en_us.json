@@ -1,19 +1,8 @@
 {
-  "block.galaxy_ship.console": "Ship Console",
-  "block.galaxy_ship.return_pad": "Return Pad",
-  "galaxy_ship.bed.no_sleep_on_ship": "Your spawn point is set. There's no night to sleep through in space",
-  "galaxy_ship.welcome": "Welcome aboard! Right-click the console at the front of the ship to fly it.",
-  "galaxy_ship.console.title": "Ship Console",
-  "galaxy_ship.console.parked": "Parked at galaxy %s",
-  "galaxy_ship.console.fuel": "Fuel: %s / %s",
-  "galaxy_ship.console.refuel_hint": "Right-click the console with coal to refuel",
-  "galaxy_ship.console.land": "Land on a planet",
-  "galaxy_ship.console.jump": "Jump to galaxy %s (%s fuel)",
-  "galaxy_ship.fuel.added": "Added %s fuel (%s / %s)",
-  "galaxy_ship.fuel.full": "The fuel tank is full",
-  "galaxy_ship.land.arrived": "You landed on a %2$s planet in galaxy %1$s. Right-click the glowing pad to go back to the ship.",
-  "galaxy_ship.land.no_galaxy": "The galaxy dimension isn't loaded. Is Galaxy Generation installed on the server?",
-  "galaxy_ship.jump.done": "%s flew the ship to galaxy %s",
-  "galaxy_ship.jump.no_fuel": "Not enough fuel: a jump needs %s, the tank has %s",
-  "galaxy_ship.jump.last": "This is the last galaxy on the map"
+  "galaxy_ship.bed.no_sleep_on_station": "Your spawn point is set. There's no night to sleep through in space",
+  "galaxy_ship.welcome": "Welcome to the station! The galaxy is below: jump off the plank walkway to dive into it. Type /station to come back.",
+  "galaxy_ship.no_building": "You can't build or break anything on the station",
+  "galaxy_ship.entered": "You dove into galaxy %s and drifted down to a %s planet. Type /station to go back up.",
+  "galaxy_ship.no_galaxy": "The galaxy dimension isn't loaded. Is Galaxy Generation installed on the server?",
+  "galaxy_ship.returned": "Back on the station"
 }

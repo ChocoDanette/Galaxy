@@ -9,12 +9,14 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 
 /**
- * Entry point for Galaxy Ship: the crew's shared home.
+ * Entry point for Galaxy Station (mod id kept as {@code galaxy_ship} so existing installs
+ * keep working): the crew's shared home.
  *
- * The ship never moves as blocks. It sits still in its own dimension of empty space
- * ({@link ShipLocation#SHIP}), and players see stars stream past the windows. Flying is
- * done at the console: the ship's position is just a galaxy number saved with the world
- * ({@link ShipData}), and landing teleports a player to that galaxy's arrival planet.
+ * The station is a small, primitive platform floating in its own dimension
+ * ({@link StationLocation#STATION}). Nobody can build or break there ({@link StationRules}).
+ * The galaxy shows below it as a little model ({@link GalaxyView}); jumping off the station
+ * into the void drops you into the real galaxy ({@link StationCrew}), and {@code /station}
+ * brings you back.
  */
 @Mod(GalaxyShip.MODID)
 public final class GalaxyShip {
@@ -22,11 +24,10 @@ public final class GalaxyShip {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public GalaxyShip(IEventBus modEventBus, ModContainer modContainer) {
-        ShipBlocks.register(modEventBus);
-        ShipNetwork.register(modEventBus);
-        ShipBuilder.register();
-        ShipCrew.register();
-        ShipCommands.register();
-        LOGGER.info("Galaxy Ship loaded");
+        StationBuilder.register();
+        StationRules.register();
+        StationCrew.register();
+        StationCommands.register();
+        LOGGER.info("Galaxy Station loaded");
     }
 }

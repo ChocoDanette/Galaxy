@@ -22,8 +22,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import io.github.chocodanette.galaxy.gravity.GravityField;
 
 /**
- * Operator commands to visit the galaxy for testing. Players travel with the ship's console
- * (Galaxy Ship mod) instead:
+ * Operator commands to visit the galaxy for testing. Players get there by jumping off the station
+ * (Galaxy Station mod). The commands:
  * <pre>
  * /galaxy go [number]   travel to a galaxy (1 if no number), landing on its middle planet
  * /galaxy leave         go back to the overworld spawn

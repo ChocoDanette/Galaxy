@@ -1,5 +1,5 @@
 {
-  "type": "galaxy_ship:ship",
+  "type": "galaxy_ship:station",
   "generator": {
     "type": "minecraft:flat",
     "settings": {
