@@ -16,6 +16,12 @@ import net.minecraft.world.phys.Vec3;
 public final class GravityFrame {
     /** Fastest the frame may turn, in degrees per tick (20 ticks per second). */
     public static final float MAX_TURN_DEGREES_PER_TICK = 9.0F;
+    /** How much faster the turn may get each tick, in degrees (so turns start gently). */
+    public static final float TURN_ACCELERATION_DEGREES = 2.0F;
+    /** Near the end, each tick turns this share of what's left (so turns end gently). */
+    private static final float TURN_EASE = 0.3F;
+    /** ... but at least this much, in degrees, so it does finish. */
+    private static final float MIN_TURN_DEGREES = 1.5F;
     /** Below this angle from world up, the entity counts as upright and vanilla code runs untouched. */
     private static final float TILT_THRESHOLD_RADIANS = 0.002F;
 
@@ -45,6 +51,25 @@ public final class GravityFrame {
 
     public void setStepUp(net.minecraft.core.Direction stepUp) {
         this.stepUp = stepUp;
+    }
+
+    /** How far the frame turned last tick, in radians (turns speed up gradually). */
+    private float lastTurn;
+    /** True while crawling through a tight tunnel (see CaveMoves). */
+    private boolean crawling;
+
+    public boolean isCrawling() {
+        return crawling;
+    }
+
+    public void setCrawling(boolean crawling) {
+        this.crawling = crawling;
+    }
+
+    /** Goes back to where the frame was before this tick's turn (no room to turn). */
+    public void undoTurn() {
+        rotation.set(previous);
+        lastTurn = 0.0F;
     }
 
     /** Center of the planet that pulled this entity last, so overlapping ranges don't flicker. */
@@ -144,6 +169,7 @@ public final class GravityFrame {
         Vector3f target = new Vector3f((float) targetUp.x, (float) targetUp.y, (float) targetUp.z).normalize();
         float angle = currentUp.angle(target);
         if (angle < 1.0E-4F) {
+            lastTurn = 0.0F;
             return;
         }
         Quaternionf turn = new Quaternionf().rotationTo(currentUp, target);
@@ -154,7 +180,11 @@ public final class GravityFrame {
                 turn = new Quaternionf().rotationAxis(angle, axis.normalize());
             }
         }
-        float maxStep = MAX_TURN_DEGREES_PER_TICK * Mth.DEG_TO_RAD;
+        // Speed up gently, slow down gently, and never go past the top speed.
+        float maxStep = Math.min(MAX_TURN_DEGREES_PER_TICK * Mth.DEG_TO_RAD,
+                Math.min(lastTurn + TURN_ACCELERATION_DEGREES * Mth.DEG_TO_RAD,
+                        Math.max(angle * TURN_EASE, MIN_TURN_DEGREES * Mth.DEG_TO_RAD)));
+        lastTurn = Math.min(angle, maxStep);
         if (angle > maxStep) {
             turn = new Quaternionf().slerp(turn, maxStep / angle);
         }

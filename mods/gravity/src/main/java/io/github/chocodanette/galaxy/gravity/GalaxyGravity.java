@@ -28,6 +28,8 @@ public final class GalaxyGravity {
         GravityFrames.register(modEventBus);
         GravityApplier.register();
         PlanetCommands.register();
+        CaveMoves.register();
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.CLIENT, GravityConfig.SPEC);
         LOGGER.info("Galaxy Gravity loaded");
     }
 }

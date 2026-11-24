@@ -1,4 +1,9 @@
 {
   "message.galaxy_gravity.hop_ready": "Hop ready: jump to hop where you look",
-  "message.galaxy_gravity.launch_ready": "Launch ready: jump to take off where you look"
+  "message.galaxy_gravity.launch_ready": "Launch ready: jump to take off where you look",
+  "galaxy_gravity.configuration.title": "Galaxy Gravity settings",
+  "galaxy_gravity.configuration.section.galaxy.gravity.client.toml": "Your settings",
+  "galaxy_gravity.configuration.section.galaxy.gravity.client.toml.title": "Your settings",
+  "galaxy_gravity.configuration.steady_camera": "Steady camera",
+  "galaxy_gravity.configuration.steady_camera.tooltip": "When gravity turns you, keep looking at the same spot: the world turns around your view."
 }
