@@ -119,4 +119,17 @@ class GravityFrameTest {
                 "upright frame should carry no turn");
         assertTrue(Math.abs(Math.abs(yaw - 30) - 90) < 0.5, "the loop's quarter turn went into the yaw: " + yaw);
     }
+
+    @Test
+    void flippingOverRollsAroundTheWayYouFace() {
+        GravityFrame frame = new GravityFrame();
+        Vec3 facing = new Vec3(0, 0, 1);
+        for (int i = 0; i < 40; i++) {
+            frame.tick(new Vec3(0, -1, 0), facing);
+        }
+        assertTrue(frame.up().y < -0.999, "up was " + frame.up());
+        // A roll keeps you facing the same way.
+        Vec3 forward = frame.toWorld(new Vec3(0, 0, 1));
+        assertTrue(forward.z > 0.999, "forward was " + forward);
+    }
 }

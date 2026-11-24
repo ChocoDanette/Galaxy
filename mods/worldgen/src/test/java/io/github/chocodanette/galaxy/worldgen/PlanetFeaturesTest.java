@@ -15,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
 
 import io.github.chocodanette.galaxy.gravity.GravityField;
 import io.github.chocodanette.galaxy.gravity.GravityMath;
+import io.github.chocodanette.galaxy.gravity.GravityWorld;
 
 class PlanetFeaturesTest {
     private static final long SEED = 123456789L;
@@ -165,7 +166,7 @@ class PlanetFeaturesTest {
     }
 
     @Test
-    void gatewayPlanetsSitInJumpableGapsBetweenTwoPlanets() {
+    void gatewayPlanetsFloatInARowBetweenTwoPlanets() {
         List<List<Planet>> groups = gatewayGroups();
         assertTrue(groups.size() > 10, "only " + groups.size() + " gateway groups");
         for (List<Planet> group : groups) {
@@ -174,19 +175,29 @@ class PlanetFeaturesTest {
             assertTrue(group.get(group.size() - 1).radius() > GalaxyLayout.MAX_GATEWAY_RADIUS);
             for (int i = 1; i < group.size() - 1; i++) {
                 assertTrue(group.get(i).radius() <= GalaxyLayout.MAX_GATEWAY_RADIUS);
+                assertTrue(group.get(i).gravityField().floats());
             }
+            assertTrue(!group.get(0).gravityField().floats());
             List<GravityField> fields = group.stream().map(Planet::gravityField).toList();
             for (int i = 0; i + 1 < group.size(); i++) {
                 Planet a = group.get(i);
                 Planet b = group.get(i + 1);
                 double gap = a.center().distanceTo(b.center()) - a.radius() - b.radius();
-                assertTrue(gap > 3.0 && gap < 6.5, "gap of " + gap);
-                // Just past halfway across the gap, the next planet's gravity has taken over.
+                assertTrue(gap > 5.5 && gap < 9.0, "gap of " + gap);
+                // Standing on the big planet, its own gravity holds you (weakly). At the
+                // floating height of the tiny planet, it holds you there.
+                GravityWorld world = GravityWorld.of(fields);
                 Vec3 dir = b.center().subtract(a.center()).normalize();
-                Vec3 pastHalf = a.center().add(dir.scale(a.radius() + gap / 2 + 0.3));
-                assertEquals(b.gravityField(), GravityMath.governingField(fields, pastHalf).orElseThrow());
-                Vec3 beforeHalf = a.center().add(dir.scale(a.radius() + gap / 2 - 0.3));
-                assertEquals(a.gravityField(), GravityMath.governingField(fields, beforeHalf).orElseThrow());
+                if (!a.isGateway()) {
+                    Vec3 onA = a.center().add(dir.scale(a.radius() + 0.5));
+                    assertEquals(a.gravityField(), GravityMath.pull(world, onA, Double.NaN).orElseThrow().field());
+                }
+                if (b.isGateway()) {
+                    Vec3 floating = b.center().subtract(dir.scale(b.radius() + Planet.GATEWAY_HOVER));
+                    GravityMath.Pull pull = GravityMath.pull(world, floating, Double.NaN).orElseThrow();
+                    assertEquals(b.gravityField(), pull.field());
+                    assertTrue(Math.abs(pull.scale()) < 0.05, "scale at floating height " + pull.scale());
+                }
             }
             // No two planets of a group touch.
             for (int i = 0; i < group.size(); i++) {

@@ -99,7 +99,7 @@ public final class GravityFrames {
         Vec3 up = upFor(entity, world, frame);
         frame.setGravityDown(up.scale(-1));
         Direction axisBefore = boxAxis(frame);
-        frame.tick(up);
+        frame.tick(up, facing(entity, frame));
         float yawChange = frame.settleTwist();
         if (yawChange != 0.0F && entity.isLocalInstanceAuthoritative()) {
             turnYaw(entity, yawChange);
@@ -135,8 +135,20 @@ public final class GravityFrames {
      * in {@link GravityMode#CENTER} mode, it is the planet's own pull.
      */
     private static Vec3 upFor(LivingEntity entity, GravityWorld world, GravityFrame frame) {
-        Vec3 planetUp = GravityMath.downDirection(world, entity.position()).scale(-1);
         int offGround = frame.updateGround(entity.onGround());
+        if (inOpenSpace(entity, world)) {
+            // Between planets: keep whatever way you're turned (see SpaceFlightClient).
+            frame.setStepUp(null);
+            return frame.up();
+        }
+        var pull = GravityMath.pull(world, entity.position(), Double.NaN, frame.holdCenter());
+        pull.filter(GravityMath.Pull::inField).ifPresent(p -> frame.setHoldCenter(p.field().center()));
+        Vec3 planetUp = pull.map(GravityMath.Pull::down).orElse(GravityMath.VANILLA_DOWN).scale(-1);
+        if (pull.isPresent() && pull.get().floating()) {
+            // Floating round a gateway planet: turn smoothly with it, no steps.
+            frame.setStepUp(null);
+            return planetUp;
+        }
         if (world.mode() == GravityMode.STEPS) {
             if (GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
                 frame.setStepUp(null);
@@ -158,6 +170,21 @@ public final class GravityFrames {
             return !state.isAir() && !state.getCollisionShape(level, cursor).isEmpty();
         };
         return GroundGravity.upAt(solidity, entity.position(), frame.up(), planetUp).orElse(planetUp);
+    }
+
+    /** The way the entity faces, flat in its own frame, in world space. */
+    private static Vec3 facing(LivingEntity entity, GravityFrame frame) {
+        double yaw = Math.toRadians(entity.getYRot());
+        return frame.toWorld(new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)));
+    }
+
+    /**
+     * True when the entity floats in space between planets: in a space dimension that has
+     * planets, outside every planet's range. There nothing turns its frame, so the view is free.
+     */
+    public static boolean inOpenSpace(Entity entity, GravityWorld world) {
+        return !world.fields().isEmpty() && Space.isSpace(entity.level())
+                && GravityMath.governingField(world.fields(), entity.position()).isEmpty();
     }
 
     /** Turns the entity's yaw (view, head and body) by some degrees, with no smoothing jump. */

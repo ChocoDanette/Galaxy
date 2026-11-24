@@ -56,11 +56,11 @@ public final class GalaxyLayout {
     public static final double MIN_GATEWAY_RADIUS = 2.5;
     public static final double MAX_GATEWAY_RADIUS = 3.5;
     /**
-     * Empty space between neighbouring planets of a gateway chain, surface to surface. A jump
-     * goes about 2.5 blocks up, and past halfway the next planet's gravity takes over, so a
-     * good jump carries you across.
+     * Empty space between neighbouring planets of a gateway chain, surface to surface. You
+     * float {@link Planet#GATEWAY_HOVER} above each tiny planet, so floating heights nearly
+     * touch, and gravity is weak near them, so a jump from a big planet reaches the first one.
      */
-    public static final double GATEWAY_GAP = 4.5;
+    public static final double GATEWAY_GAP = 7.0;
     /** Smallest sphere or cube with caves inside. */
     private static final double MIN_CAVE_RADIUS = 9.0;
 

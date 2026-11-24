@@ -58,12 +58,27 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
 
     /** How far the gravity reaches from the center: a bit more for bigger planets. */
     public double gravityRange() {
+        if (isGateway()) {
+            // Stops short of the planets next to it, so their ground stays normal.
+            return extent() + GalaxyLayout.GATEWAY_GAP - 1.5;
+        }
         return extent() + 10.0 + radius * 0.5;
     }
 
     /** The gravity field the Gravity mod uses to pull players and mobs toward this planet. */
     public GravityField gravityField() {
-        return new GravityField(center, radius, gravityRange(), strength, shape);
+        return new GravityField(center, radius, gravityRange(), strength, shape, isGateway() ? GATEWAY_HOVER : 0.0);
+    }
+
+    /** How high above a gateway planet you float, in blocks (feet to ground). */
+    public static final double GATEWAY_HOVER = 3.0;
+
+    /**
+     * True for a tiny gateway planet: you can't land on it, you float around it instead (see
+     * {@link GravityField#hover}), so a row of them makes a floating path between two planets.
+     */
+    public boolean isGateway() {
+        return radius <= GalaxyLayout.MAX_GATEWAY_RADIUS;
     }
 
     /**

@@ -47,6 +47,27 @@ public final class GravityFrame {
         this.stepUp = stepUp;
     }
 
+    /** Center of the planet that pulled this entity last, so overlapping ranges don't flicker. */
+    private Vec3 holdCenter;
+
+    public Vec3 holdCenter() {
+        return holdCenter;
+    }
+
+    public void setHoldCenter(Vec3 center) {
+        holdCenter = center;
+    }
+
+    /** True while the jump key is held after a jump off a floating planet (one jump per press). */
+    private boolean floatJumpHeld;
+
+    /** Records the jump key while floating; returns true once per press. */
+    public boolean pressFloatJump(boolean jumping) {
+        boolean fresh = jumping && !floatJumpHeld;
+        floatJumpHeld = jumping;
+        return fresh;
+    }
+
     /** Ticks spent crouching on a planet, for the charged jump (see {@link Launch}). */
     private int chargeTicks;
     /** True from a charged jump until landing: half pull, little air drag. */
@@ -105,6 +126,19 @@ public final class GravityFrame {
 
     /** Turns toward a target "up" (unit vector), at most {@link #MAX_TURN_DEGREES_PER_TICK}. */
     public void tick(Vec3 targetUp) {
+        tick(targetUp, null);
+    }
+
+    /** Past this angle the shortest turn has no clear side, so we pick one (see below). */
+    private static final float FLIP_RADIANS = 170.0F * Mth.DEG_TO_RAD;
+
+    /**
+     * Same, for a "up" that may flip right over (between two planets facing each other).
+     * Turning by 180 degrees could go any way round, so it rolls around {@code facing} (the
+     * way the entity faces): you keep looking where you were going while the world turns
+     * over, instead of a random tumble.
+     */
+    public void tick(Vec3 targetUp, Vec3 facing) {
         previous.set(rotation);
         Vector3f currentUp = rotation.transform(new Vector3f(0, 1, 0));
         Vector3f target = new Vector3f((float) targetUp.x, (float) targetUp.y, (float) targetUp.z).normalize();
@@ -113,6 +147,13 @@ public final class GravityFrame {
             return;
         }
         Quaternionf turn = new Quaternionf().rotationTo(currentUp, target);
+        if (angle > FLIP_RADIANS && facing != null) {
+            Vector3f axis = new Vector3f((float) facing.x, (float) facing.y, (float) facing.z);
+            axis.sub(new Vector3f(currentUp).mul(axis.dot(currentUp)));
+            if (axis.lengthSquared() > 1.0E-6F) {
+                turn = new Quaternionf().rotationAxis(angle, axis.normalize());
+            }
+        }
         float maxStep = MAX_TURN_DEGREES_PER_TICK * Mth.DEG_TO_RAD;
         if (angle > maxStep) {
             turn = new Quaternionf().slerp(turn, maxStep / angle);

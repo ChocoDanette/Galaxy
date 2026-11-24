@@ -10,7 +10,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * Free flight in space (creative and spectator flying in a space dimension, like the galaxy).
  * While flying there, no planet pulls you and your frame follows your view, so you can turn
  * any way you like, loops included. When you stop flying, planet gravity takes over again
- * and turns you back toward the nearest planet.
+ * and turns you back toward the nearest planet. The same free view applies while drifting
+ * between planets, outside every planet's range (see {@link #isDrifting}).
  *
  * The flying player's own game decides the frame and tells the server, which passes it on to
  * everyone who can see them.
@@ -24,6 +25,20 @@ public final class SpaceFlight {
         return entity instanceof Player player && player.getAbilities().flying && Space.isSpace(player.level());
     }
 
+    /**
+     * True when this player drifts between planets (outside every range, not flying): the
+     * view is free there too, so looking up or down turns the whole body, loops included.
+     */
+    public static boolean isDrifting(Entity entity) {
+        return entity instanceof Player player && !player.getAbilities().flying && !player.isPassenger()
+                && GravityFrames.inOpenSpace(player, GravityFrames.worldFor(player));
+    }
+
+    /** True when the player's own game turns their frame (free flight or drifting). */
+    public static boolean hasFreeView(Entity entity) {
+        return isFreeFlying(entity) || isDrifting(entity);
+    }
+
     /** True when the entity's frame is currently held by free flight. */
     public static boolean holdsFrame(Entity entity) {
         GravityFrame frame = GravityFrames.of(entity);
@@ -32,7 +47,7 @@ public final class SpaceFlight {
 
     /** On the server: a flying player reports their frame. */
     static void onFromPlayer(ServerPlayer player, FlightFramePayload payload) {
-        boolean allowed = payload.free() && player.getAbilities().flying && Space.isSpace(player.level());
+        boolean allowed = payload.free() && hasFreeView(player);
         GravityFrame frame = player.getData(GravityFrames.FRAME);
         if (allowed) {
             frame.snapTo(payload.rotation());

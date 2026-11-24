@@ -19,8 +19,11 @@ import io.netty.buffer.ByteBuf;
  * @param range    how far from the center the field reaches, in blocks (must be at least radius)
  * @param strength pull compared to vanilla gravity (1.0 = normal)
  * @param shape    the planet's shape, which decides which way "down" points on its surface
+ * @param hover    0 for a normal planet. Above 0, a floating planet: it pulls you in from
+ *                 afar but pushes you away when you get closer than this to its surface, so
+ *                 you float around it at that height and can never land (gateway planets)
  */
-public record GravityField(Vec3 center, double radius, double range, double strength, Shape shape) {
+public record GravityField(Vec3 center, double radius, double range, double strength, Shape shape, double hover) {
     /**
      * How far in from a cube's edges its gravity starts to bend over the edge, in blocks.
      * On the rest of a face, down points straight into the face so it walks like flat ground.
@@ -33,7 +36,8 @@ public record GravityField(Vec3 center, double radius, double range, double stre
             Codec.DOUBLE.fieldOf("radius").forGetter(GravityField::radius),
             Codec.DOUBLE.fieldOf("range").forGetter(GravityField::range),
             Codec.DOUBLE.fieldOf("strength").forGetter(GravityField::strength),
-            Shape.CODEC.optionalFieldOf("shape", Shape.SPHERE).forGetter(GravityField::shape)
+            Shape.CODEC.optionalFieldOf("shape", Shape.SPHERE).forGetter(GravityField::shape),
+            Codec.DOUBLE.optionalFieldOf("hover", 0.0).forGetter(GravityField::hover)
     ).apply(i, GravityField::new));
 
     /** How a field is sent from the server to players. */
@@ -43,6 +47,7 @@ public record GravityField(Vec3 center, double radius, double range, double stre
             ByteBufCodecs.DOUBLE, GravityField::range,
             ByteBufCodecs.DOUBLE, GravityField::strength,
             Shape.STREAM_CODEC, GravityField::shape,
+            ByteBufCodecs.DOUBLE, GravityField::hover,
             GravityField::new);
 
     public GravityField {
@@ -58,6 +63,35 @@ public record GravityField(Vec3 center, double radius, double range, double stre
         if (shape == null) {
             throw new IllegalArgumentException("shape must be set");
         }
+        if (hover < 0) {
+            throw new IllegalArgumentException("hover must not be negative");
+        }
+    }
+
+    /** A normal planet you can land on. */
+    public GravityField(Vec3 center, double radius, double range, double strength, Shape shape) {
+        this(center, radius, range, strength, shape, 0.0);
+    }
+
+    /** True for a floating planet (see {@link #hover}). */
+    public boolean floats() {
+        return hover > 0;
+    }
+
+    /** How many blocks it takes the push to turn into a pull around the floating height. */
+    public static final double HOVER_SPRING = 2.0;
+
+    /**
+     * Share of the pull at a position, from -1 to 1. Always 1 on a normal planet. On a floating
+     * planet it is negative (pushes out) below the floating height, 0 right at it and positive
+     * above, changing smoothly like a spring so you settle at that height.
+     */
+    public double pullShare(Vec3 pos) {
+        if (!floats()) {
+            return 1.0;
+        }
+        double off = (distanceToSurface(pos) - hover) / HOVER_SPRING;
+        return Math.max(-1.0, Math.min(1.0, off));
     }
 
     /** A round planet. */
