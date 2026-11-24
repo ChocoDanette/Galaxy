@@ -232,4 +232,33 @@ class GravityMathTest {
         assertVec(new Vec3(0, -1, 0), held.down());
         assertEquals(b, GravityMath.pull(world, new Vec3(0, 11.5, 0), Double.NaN, a.center()).orElseThrow().field());
     }
+
+    @Test
+    void aFloatingPlanetPushesCloseInAndPullsFurtherOut() {
+        GravityField tiny = new GravityField(Vec3.ZERO, 3, 15, 1, GravityField.Shape.SPHERE, 3.0);
+        GravityWorld world = GravityWorld.of(List.of(tiny));
+        GravityMath.Pull close = GravityMath.pull(world, new Vec3(0, 4, 0), Double.NaN).orElseThrow();
+        assertTrue(close.floating());
+        assertVec(new Vec3(0, -1, 0), close.down());
+        assertTrue(close.scale() < 0, "close in it should push, scale " + close.scale());
+        assertTrue(close.force().y > 0);
+        assertEquals(0.0, GravityMath.pull(world, new Vec3(0, 6, 0), Double.NaN).orElseThrow().scale(), EPS);
+        GravityMath.Pull far = GravityMath.pull(world, new Vec3(0, 10, 0), Double.NaN).orElseThrow();
+        assertEquals(GravityMath.FLOAT_ZONE_GRAVITY, far.scale(), EPS);
+    }
+
+    @Test
+    void gravityIsWeakNearAFloatingPlanetEvenOnTheBigPlanetNextToIt() {
+        GravityField big = new GravityField(Vec3.ZERO, 10, 30, 1);
+        GravityField tiny = new GravityField(new Vec3(20, 0, 0), 3, 8.5, 1, GravityField.Shape.SPHERE, 3.0);
+        GravityWorld world = GravityWorld.of(List.of(big, tiny));
+        // Inside its range, the floating planet catches you though the big one is as close.
+        assertEquals(tiny, GravityMath.pull(world, new Vec3(13, 0, 0), Double.NaN).orElseThrow().field());
+        GravityMath.Pull onBig = GravityMath.pull(world, new Vec3(10.5, 0, 0), Double.NaN).orElseThrow();
+        assertEquals(big, onBig.field());
+        assertTrue(!onBig.floating());
+        assertTrue(onBig.scale() < 0.31 && onBig.scale() > 0.2, "scale " + onBig.scale());
+        // Far from the tiny planet, normal gravity.
+        assertEquals(1.0, GravityMath.pull(world, new Vec3(-10.5, 0, 0), Double.NaN).orElseThrow().scale(), EPS);
+    }
 }

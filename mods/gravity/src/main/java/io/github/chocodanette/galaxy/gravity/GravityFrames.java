@@ -141,14 +141,14 @@ public final class GravityFrames {
             frame.setStepUp(null);
             return frame.up();
         }
-        Vec3 planetUp = GravityMath.pull(world, entity.position(), Double.NaN, frame.holdCenter())
-                .map(pull -> {
-                    if (pull.inField()) {
-                        frame.setHoldCenter(pull.field().center());
-                    }
-                    return pull.down();
-                })
-                .orElse(GravityMath.VANILLA_DOWN).scale(-1);
+        var pull = GravityMath.pull(world, entity.position(), Double.NaN, frame.holdCenter());
+        pull.filter(GravityMath.Pull::inField).ifPresent(p -> frame.setHoldCenter(p.field().center()));
+        Vec3 planetUp = pull.map(GravityMath.Pull::down).orElse(GravityMath.VANILLA_DOWN).scale(-1);
+        if (pull.isPresent() && pull.get().floating()) {
+            // Floating round a gateway planet: turn smoothly with it, no steps.
+            frame.setStepUp(null);
+            return planetUp;
+        }
         if (world.mode() == GravityMode.STEPS) {
             if (GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
                 frame.setStepUp(null);

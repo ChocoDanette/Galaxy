@@ -21,7 +21,7 @@ public final class PlanetSync {
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar(GalaxyGravity.MODID).versioned("7");
+        var registrar = event.registrar(GalaxyGravity.MODID).versioned("8");
         registrar.playToClient(
                 SyncPlanetsPayload.TYPE,
                 SyncPlanetsPayload.STREAM_CODEC,

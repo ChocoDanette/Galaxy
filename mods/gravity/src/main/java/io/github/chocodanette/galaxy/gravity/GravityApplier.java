@@ -3,6 +3,8 @@ package io.github.chocodanette.galaxy.gravity;
 import java.util.Optional;
 
 import net.minecraft.resources.Identifier;
+
+import io.github.chocodanette.galaxy.gravity.mixin.LivingEntityAccess;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -24,6 +26,11 @@ public final class GravityApplier {
             Identifier.fromNamespaceAndPath(GalaxyGravity.MODID, "planet_gravity");
     private static final AttributeModifier CANCEL_VANILLA = new AttributeModifier(
             NO_VANILLA_GRAVITY, -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+
+    /** Share of the speed toward or away from a floating planet lost each tick. */
+    private static final double FLOAT_DAMPING = 0.12;
+    /** Speed of a jump off a floating planet, in blocks per tick. */
+    private static final double FLOAT_JUMP = 0.4;
 
     private GravityApplier() {
     }
@@ -63,8 +70,27 @@ public final class GravityApplier {
         if (anyFrame != null && pull.get().inField()) {
             if (entity.onGround() || entity.isInLiquid() || entity.onClimbable()) {
                 anyFrame.setTakeoffDistance(field.distanceToSurface(entity.position()));
-                scale = field.strength() * GravityMath.pullFactor(field, entity.position(), anyFrame.takeoffDistance());
             }
+        }
+        if (anyFrame != null && !pull.get().floating()) {
+            anyFrame.pressFloatJump(true);
+        }
+        if (pull.get().floating() && !entity.onGround()) {
+            // Around a floating planet: pushed out close in, pulled in further out, so you
+            // settle at its floating height. Extra drag along the pull stops the bobbing.
+            Vec3 motion = entity.getDeltaMovement();
+            Vec3 radial = down.scale(motion.dot(down) * FLOAT_DAMPING);
+            Vec3 force = pull.get().force();
+            if (anyFrame != null && anyFrame.isLaunched()) {
+                force = force.scale(Launch.PULL_SHARE);
+            }
+            Vec3 kick = Vec3.ZERO;
+            if (anyFrame != null && anyFrame.pressFloatJump(((LivingEntityAccess) entity).galaxy$isJumping())) {
+                // Jumping while floating: push off along your up, to leave for the next planet.
+                kick = down.scale(-FLOAT_JUMP);
+            }
+            entity.setDeltaMovement(motion.subtract(radial).add(force.scale(gravity.getBaseValue())).add(kick));
+            return;
         }
         if (anyFrame != null && anyFrame.gravityDown() != null && pull.get().inField()) {
             // Living things are pulled the way their frame update picked (into the ground).

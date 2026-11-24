@@ -74,8 +74,30 @@ public final class GravityMath {
      * @param field   the planet doing the pulling
      * @param inField true inside the planet's range, false for the weak pull from space
      */
-    public record Pull(Vec3 down, double scale, GravityField field, boolean inField) {
+    public record Pull(Vec3 down, double scale, GravityField field, boolean inField, Vec3 force) {
+        /** A pull straight along {@code down}. */
+        public Pull(Vec3 down, double scale, GravityField field, boolean inField) {
+            this(down, scale, field, inField, down.scale(scale));
+        }
+
+        /** True when the planet doing the pulling is a floating one (see {@link GravityField#hover}). */
+        public boolean floating() {
+            return inField && field.floats();
+        }
     }
+
+    /**
+     * Inside the range of a floating (gateway) planet, all gravity is this much weaker, for
+     * big jumps and a floaty feel, including on the bigger planets next to it.
+     */
+    public static final double FLOAT_ZONE_GRAVITY = 0.3;
+    /** The weak gravity reaches this many blocks past a floating planet's own range. */
+    public static final double FLOAT_ZONE_MARGIN = 6.0;
+    /**
+     * Inside its range, a floating planet counts this much more than a normal one, so it
+     * catches you even though the bigger planet next to it is about as close.
+     */
+    static final double FLOAT_PRIORITY = 30.0;
 
     /**
      * The pull at a position: the governing planet inside a range, otherwise the weak pull
@@ -105,7 +127,15 @@ public final class GravityMath {
      * @param holdCenter center of the planet the entity was pulled by last, or null
      */
     public static Optional<Pull> pull(GravityWorld world, Vec3 pos, double takeoffDistance, Vec3 holdCenter) {
+        double low = 1.0;
+        for (GravityField field : world.fields()) {
+            if (field.floats() && pos.distanceTo(field.center()) <= field.range() + FLOAT_ZONE_MARGIN) {
+                low = FLOAT_ZONE_GRAVITY;
+                break;
+            }
+        }
         Vec3 sum = Vec3.ZERO;
+        Vec3 force = Vec3.ZERO;
         double totalWeight = 0;
         double strength = 0;
         GravityField dominant = null;
@@ -116,9 +146,11 @@ public final class GravityMath {
             }
             double weight = blendWeight(field, pos, holdCenter);
             Vec3 down = downDirection(field, pos, VANILLA_DOWN);
+            double share = field.strength() * pullFactor(field, pos, takeoffDistance) * field.pullShare(pos) * low;
             sum = sum.add(down.scale(weight));
+            force = force.add(down.scale(weight * share));
             totalWeight += weight;
-            strength += weight * field.strength() * pullFactor(field, pos, takeoffDistance);
+            strength += weight * share;
             if (weight > dominantWeight) {
                 dominantWeight = weight;
                 dominant = field;
@@ -127,7 +159,10 @@ public final class GravityMath {
         if (dominant != null) {
             Vec3 down = sum.length() > 1.0E-6 * totalWeight ? sum.normalize()
                     : downDirection(dominant, pos, VANILLA_DOWN);
-            return Optional.of(new Pull(down, strength / totalWeight, dominant, true));
+            force = force.scale(1.0 / totalWeight);
+            // A floating planet may push (negative); a normal one only pulls.
+            double scale = dominant.floats() ? force.dot(down) : Math.max(0.0, strength / totalWeight);
+            return Optional.of(new Pull(down, scale, dominant, true, dominant.floats() ? force : down.scale(scale)));
         }
         if (world.spacePull() <= 0) {
             return Optional.empty();
@@ -158,6 +193,9 @@ public final class GravityMath {
             double t = Math.max(0.0, edge);
             // Never quite zero, so a lone range still pulls right up to its edge.
             weight *= Math.max(1.0E-4, t * t * (3 - 2 * t));
+        }
+        if (field.floats()) {
+            weight *= FLOAT_PRIORITY;
         }
         if (holdCenter != null && holdCenter.equals(field.center())) {
             weight *= HOLD_WEIGHT;

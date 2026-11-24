@@ -58,6 +58,16 @@ public final class GravityFrame {
         holdCenter = center;
     }
 
+    /** True while the jump key is held after a jump off a floating planet (one jump per press). */
+    private boolean floatJumpHeld;
+
+    /** Records the jump key while floating; returns true once per press. */
+    public boolean pressFloatJump(boolean jumping) {
+        boolean fresh = jumping && !floatJumpHeld;
+        floatJumpHeld = jumping;
+        return fresh;
+    }
+
     /** Ticks spent crouching on a planet, for the charged jump (see {@link Launch}). */
     private int chargeTicks;
     /** True from a charged jump until landing: half pull, little air drag. */
