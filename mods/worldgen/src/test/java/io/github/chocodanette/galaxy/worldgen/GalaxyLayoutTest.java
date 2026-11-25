@@ -22,15 +22,9 @@ class GalaxyLayoutTest {
     private static final long SEED = 123456789L;
 
     private static List<Planet> planetsOfGalaxy(long seed, int number) {
-        Galaxy galaxy = Galaxy.of(seed, number);
-        int reach = galaxy.radius() / GalaxyLayout.CELL_SIZE + 1;
-        int middle = GalaxyLayout.cellOf(galaxy.centerX());
+        GalaxyCycle.setCurrentForTests(number, number);
         List<Planet> planets = new ArrayList<>();
-        for (int cx = middle - reach; cx <= middle + reach; cx++) {
-            for (int cz = -reach; cz <= reach; cz++) {
-                planets.addAll(GalaxyLayout.planetsInCell(seed, cx, cz));
-            }
-        }
+        GalaxyLayout.allCells(seed).forEach(planets::addAll);
         return planets;
     }
 
@@ -42,7 +36,8 @@ class GalaxyLayoutTest {
     @Test
     void differentSeedsAndGalaxiesDiffer() {
         assertNotEquals(planetsOfGalaxy(SEED, 1), planetsOfGalaxy(SEED + 1, 1));
-        assertNotEquals(Galaxy.of(SEED, 1), Galaxy.of(SEED, 2));
+        assertNotEquals(Galaxy.of(SEED, 1, 1), Galaxy.of(SEED, 2, 1));
+        assertNotEquals(planetsOfGalaxy(SEED, 1).get(0).center().x, planetsOfGalaxy(SEED, 2).get(0).center().x);
     }
 
     @Test
@@ -72,6 +67,7 @@ class GalaxyLayoutTest {
                 double e = p.extent();
                 assertEquals(GalaxyLayout.cellOf(c.x - e), GalaxyLayout.cellOf(c.x + e), "x crosses cell: " + p);
                 assertEquals(GalaxyLayout.cellOf(c.z - e), GalaxyLayout.cellOf(c.z + e), "z crosses cell: " + p);
+                assertEquals(GalaxyLayout.cellOf(c.y - e), GalaxyLayout.cellOf(c.y + e), "y crosses cell: " + p);
                 assertTrue(c.y - e >= GalaxyLayout.MIN_Y && c.y + e <= GalaxyLayout.MAX_Y, "outside height: " + p);
                 assertTrue(e <= GalaxyLayout.MAX_EXTENT + 1.0e-9);
             }
@@ -80,15 +76,23 @@ class GalaxyLayoutTest {
 
     @Test
     void nothingBetweenGalaxies() {
+        GalaxyCycle.setCurrentForTests(1, 1);
         int between = GalaxyLayout.cellOf(Galaxy.SPACING * 1.5);
-        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, between, 0));
-        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, 0, 0));
+        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, between, 0, 0));
+        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, 0, 0, 0));
+        // Only the current galaxy has planets: the old ones' slots are empty.
+        int oldMiddle = GalaxyLayout.cellOf(2 * Galaxy.SPACING);
+        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, oldMiddle, 0, 0));
+        GalaxyCycle.setCurrentForTests(7, 2);
+        assertEquals(1, GalaxyLayout.planetsInCell(SEED, oldMiddle, 0, 0).size());
+        assertEquals(List.of(), GalaxyLayout.planetsInCell(SEED, GalaxyLayout.cellOf(Galaxy.SPACING), 0, 0));
     }
 
     @Test
     void arrivalPlanetHasGroundAndGravity() {
         for (int number = 1; number <= 20; number++) {
-            Planet planet = GalaxyLayout.arrivalPlanet(SEED, number);
+            GalaxyCycle.setCurrentForTests(number, number);
+            Planet planet = GalaxyLayout.arrivalPlanet(SEED);
             Vec3 spot = planet.landingSpot();
             int x = (int) Math.floor(spot.x);
             int y = (int) Math.floor(spot.y);
@@ -154,7 +158,8 @@ class GalaxyLayoutTest {
 
     @Test
     void chunkQueryFindsEveryPlanetThatReachesIt() {
-        Planet planet = GalaxyLayout.arrivalPlanet(SEED, 3);
+        GalaxyCycle.setCurrentForTests(3, 3);
+        Planet planet = GalaxyLayout.arrivalPlanet(SEED);
         int x = (int) Math.floor(planet.center().x);
         int z = (int) Math.floor(planet.center().z);
         int chunkMinX = Math.floorDiv(x, 16) * 16;
