@@ -17,6 +17,10 @@ import net.neoforged.fml.common.Mod;
  * The galaxy shows below it as a little model ({@link GalaxyView}); jumping off the station
  * into the void drops you into the real galaxy ({@link StationCrew}), and {@code /station}
  * brings you back.
+ *
+ * Crews can also have a station of their own ({@link StationPlots}): buy a space rock from the
+ * trader on the common station ({@link StationTrade}), use it, and your station appears on its
+ * own plot far from everyone else's. Crews and their roles live in {@code crew.CrewData}.
  */
 @Mod(GalaxyShip.MODID)
 public final class GalaxyShip {
@@ -28,6 +32,10 @@ public final class GalaxyShip {
         StationRules.register();
         StationCrew.register();
         StationCommands.register();
+        StationItems.register(modEventBus);
+        StationBlooms.register();
+        CrewCommands.register();
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.LOCAL, StationConfig.SPEC);
         LOGGER.info("Galaxy Station loaded");
     }
 }

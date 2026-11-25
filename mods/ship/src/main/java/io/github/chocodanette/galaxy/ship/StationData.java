@@ -15,11 +15,17 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 public final class StationData extends SavedData {
     /** Bump when the station's look changes, so existing worlds get the new one. */
     public static final int LAYOUT_VERSION = 1;
+    /**
+     * Bump when things are added to the existing station (without rebuilding it, so chests
+     * keep what's in them).
+     */
+    public static final int EXTRAS_VERSION = 1;
 
     public static final Codec<StationData> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.INT.optionalFieldOf("built_version", 0).forGetter(data -> data.builtVersion),
             Codec.INT.optionalFieldOf("galaxy", 1).forGetter(data -> data.galaxy),
-            Codec.INT.optionalFieldOf("view_galaxy", 0).forGetter(data -> data.viewGalaxy)
+            Codec.INT.optionalFieldOf("view_galaxy", 0).forGetter(data -> data.viewGalaxy),
+            Codec.INT.optionalFieldOf("extras_version", 0).forGetter(data -> data.extrasVersion)
     ).apply(i, StationData::new));
 
     public static final SavedDataType<StationData> TYPE = new SavedDataType<>(
@@ -29,15 +35,27 @@ public final class StationData extends SavedData {
     private int builtVersion;
     private int galaxy;
     private int viewGalaxy;
+    private int extrasVersion;
 
     public StationData() {
-        this(0, 1, 0);
+        this(0, 1, 0, 0);
     }
 
-    private StationData(int builtVersion, int galaxy, int viewGalaxy) {
+    private StationData(int builtVersion, int galaxy, int viewGalaxy, int extrasVersion) {
         this.builtVersion = builtVersion;
         this.galaxy = galaxy;
         this.viewGalaxy = viewGalaxy;
+        this.extrasVersion = extrasVersion;
+    }
+
+    /** Whether the latest additions (the trader, the bloom to your own station) are in place. */
+    public boolean extrasUpToDate() {
+        return extrasVersion >= EXTRAS_VERSION;
+    }
+
+    public void setExtrasBuilt() {
+        extrasVersion = EXTRAS_VERSION;
+        setDirty();
     }
 
     public static StationData get(MinecraftServer server) {
