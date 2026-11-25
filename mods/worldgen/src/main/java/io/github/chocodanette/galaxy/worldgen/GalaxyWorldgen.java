@@ -39,6 +39,7 @@ public final class GalaxyWorldgen {
         PlanetGravityLink.register();
         GalaxyCommands.register();
         VanillaDimensions.register();
+        GalaxyClock.register();
         LOGGER.info("Galaxy Generation loaded");
     }
 }

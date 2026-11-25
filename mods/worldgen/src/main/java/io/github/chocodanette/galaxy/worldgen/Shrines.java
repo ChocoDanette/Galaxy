@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.phys.Vec3;
 
 import io.github.chocodanette.galaxy.gravity.GravityField;
 
@@ -83,10 +84,12 @@ public final class Shrines {
 
     /** The middle planet of a galaxy, where everyone lands, stays peaceful. */
     private static boolean isArrival(Planet planet) {
-        int number = Galaxy.numberAt(planet.center().x);
-        return number != 0
-                && GalaxyLayout.cellOf(planet.center().x) == GalaxyLayout.cellOf((double) number * Galaxy.SPACING)
-                && GalaxyLayout.cellOf(planet.center().z) == 0;
+        Vec3 c = planet.center();
+        int slot = Galaxy.slotAt(c.x);
+        return slot != 0
+                && GalaxyLayout.cellOf(c.x) == GalaxyLayout.cellOf((double) slot * Galaxy.SPACING)
+                && GalaxyLayout.cellOf(c.y) == GalaxyLayout.cellOf(Galaxy.CENTER_Y)
+                && GalaxyLayout.cellOf(c.z) == 0;
     }
 
     /** The middle of the shrine's platform: the ground block on top of the planet. */

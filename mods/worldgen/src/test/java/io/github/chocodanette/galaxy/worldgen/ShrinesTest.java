@@ -19,15 +19,9 @@ class ShrinesTest {
     private static final long SEED = 123456789L;
 
     private static List<Planet> planetsOfGalaxy(long seed, int number) {
-        Galaxy galaxy = Galaxy.of(seed, number);
-        int reach = galaxy.radius() / GalaxyLayout.CELL_SIZE + 1;
-        int middle = GalaxyLayout.cellOf(galaxy.centerX());
+        GalaxyCycle.setCurrentForTests(number, number);
         List<Planet> planets = new ArrayList<>();
-        for (int cx = middle - reach; cx <= middle + reach; cx++) {
-            for (int cz = -reach; cz <= reach; cz++) {
-                planets.addAll(GalaxyLayout.planetsInCell(seed, cx, cz));
-            }
-        }
+        GalaxyLayout.allCells(seed).forEach(planets::addAll);
         return planets;
     }
 
@@ -35,7 +29,7 @@ class ShrinesTest {
     void voidIsNeverACommonPick() {
         assertFalse(PlanetTheme.COMMON.contains(PlanetTheme.VOID));
         for (int number = 1; number <= 20; number++) {
-            assertFalse(Galaxy.of(SEED, number).favorites().contains(PlanetTheme.VOID));
+            assertFalse(Galaxy.of(SEED, number, number).favorites().contains(PlanetTheme.VOID));
         }
     }
 
@@ -43,15 +37,16 @@ class ShrinesTest {
     void everyGalaxyHasAFewFarVoidPlanetsAndEmberShrines() {
         int galaxiesWithEmber = 0;
         for (int number = 1; number <= 5; number++) {
-            Galaxy galaxy = Galaxy.of(SEED, number);
+            Galaxy galaxy = Galaxy.of(SEED, number, number);
             int voids = 0;
             int ember = 0;
-            for (Planet p : planetsOfGalaxy(SEED, number)) {
+            List<Planet> planets = planetsOfGalaxy(SEED, number);
+            for (Planet p : planets) {
                 if (p.theme() == PlanetTheme.VOID) {
                     voids++;
-                    double dx = p.center().x - galaxy.centerX();
-                    double dz = p.center().z;
-                    assertTrue(Math.sqrt(dx * dx + dz * dz) > galaxy.radius() * GalaxyLayout.VOID_MIN_DISTANCE - 96,
+                    double across = Math.hypot(p.center().x - galaxy.centerX(), p.center().z) / galaxy.radius();
+                    double up = (p.center().y - Galaxy.CENTER_Y) / galaxy.thickness();
+                    assertTrue(Math.sqrt(across * across + up * up) > GalaxyLayout.VOID_MIN_DISTANCE - 0.2,
                             "void planet too close to the middle: " + p);
                     assertNotEquals(GravityField.Shape.HOLLOW, p.shape());
                 }
@@ -59,7 +54,10 @@ class ShrinesTest {
                     ember++;
                 }
             }
-            assertTrue(voids >= 2 && voids <= 40, "galaxy " + number + " has " + voids + " void planets");
+            System.out.println("VOIDS " + number + " " + voids + " of " + planets.size() + ", ember shrines " + ember);
+            // A few percent of all planets: rare, but a galaxy always has some.
+            assertTrue(voids >= 2 && voids <= planets.size() * 0.06,
+                    "galaxy " + number + " has " + voids + " void planets out of " + planets.size());
             if (ember > 0) {
                 galaxiesWithEmber++;
             }
@@ -70,7 +68,8 @@ class ShrinesTest {
     @Test
     void arrivalPlanetNeverHasAShrine() {
         for (int number = 1; number <= 50; number++) {
-            Planet arrival = GalaxyLayout.arrivalPlanet(SEED, number);
+            GalaxyCycle.setCurrentForTests(number, number);
+            Planet arrival = GalaxyLayout.arrivalPlanet(SEED);
             assertEquals(null, Shrines.of(arrival), "galaxy " + number);
             assertNotEquals(PlanetTheme.VOID, arrival.theme());
         }

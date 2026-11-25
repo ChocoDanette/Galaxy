@@ -213,6 +213,6 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
     @Override
     public void addDebugScreenInfo(List<String> result, RandomState randomState, BlockPos feetPos, SamplerContext samplerContext) {
         int number = Galaxy.numberAt(feetPos.getX());
-        result.add(number == 0 ? "Galaxy: none (empty space)" : "Galaxy: " + number);
+        result.add(number == 0 ? "Galaxy: none (empty space)" : "Galaxy: " + number + " (slot " + GalaxyCycle.slot() + ")");
     }
 }

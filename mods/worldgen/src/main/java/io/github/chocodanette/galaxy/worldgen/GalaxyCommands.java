@@ -25,9 +25,12 @@ import io.github.chocodanette.galaxy.gravity.GravityField;
  * Operator commands to visit the galaxy for testing. Players get there by jumping off the station
  * (Galaxy Station mod). The commands:
  * <pre>
- * /galaxy go [number]   travel to a galaxy (1 if no number), landing on its middle planet
+ * /galaxy go            travel to the current galaxy, landing on its middle planet
  * /galaxy leave         go back to the overworld spawn
  * /galaxy info          what galaxy and planet you're near
+ * /galaxy timer         how long until the galaxy collapses
+ * /galaxy timer &lt;min&gt;   make it collapse in this many minutes (0 = right now)
+ * /galaxy next          collapse it now: everyone inside goes home, a new galaxy forms
  * /galaxy find &lt;kind&gt;   jump to the nearest hollow planet, gateway planets, planet with
  *                       caves or planet with trees in the galaxy you're in, or onto
  *                       the nearest linked Launch Bloom leaf ("bloom"); "ember" finds an
@@ -45,10 +48,12 @@ public final class GalaxyCommands {
     private static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("galaxy")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-                .then(Commands.literal("go")
-                        .executes(ctx -> go(ctx, 1))
-                        .then(Commands.argument("number", IntegerArgumentType.integer(1, Galaxy.MAX_NUMBER))
-                                .executes(ctx -> go(ctx, IntegerArgumentType.getInteger(ctx, "number")))))
+                .then(Commands.literal("go").executes(GalaxyCommands::go))
+                .then(Commands.literal("timer")
+                        .executes(GalaxyCommands::timer)
+                        .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 6 * 60))
+                                .executes(ctx -> setTimer(ctx, IntegerArgumentType.getInteger(ctx, "minutes")))))
+                .then(Commands.literal("next").executes(GalaxyCommands::next))
                 .then(Commands.literal("leave").executes(GalaxyCommands::leave))
                 .then(Commands.literal("info").executes(GalaxyCommands::info))
                 .then(Commands.literal("find")
@@ -61,8 +66,8 @@ public final class GalaxyCommands {
                         .then(Commands.literal("bloom").executes(GalaxyCommands::findBloom))));
     }
 
-    /** How many cells around the player /galaxy find looks through (about 1400 blocks). */
-    private static final int FIND_CELLS = 15;
+    /** How many cells around the player /galaxy find looks through, along each axis (about 1000 blocks). */
+    private static final int FIND_CELLS = 5;
 
     private static boolean matches(List<Planet> cell, String kind) {
         return switch (kind) {
@@ -84,12 +89,14 @@ public final class GalaxyCommands {
         }
         long seed = level.getSeed();
         int cellX = GalaxyLayout.cellOf(player.getX());
+        int cellY = GalaxyLayout.cellOf(player.getY());
         int cellZ = GalaxyLayout.cellOf(player.getZ());
         Planet found = null;
         double best = Double.MAX_VALUE;
         for (int dx = -FIND_CELLS; dx <= FIND_CELLS; dx++) {
+            for (int dy = -FIND_CELLS; dy <= FIND_CELLS; dy++) {
             for (int dz = -FIND_CELLS; dz <= FIND_CELLS; dz++) {
-                List<Planet> cell = GalaxyLayout.planetsInCell(seed, cellX + dx, cellZ + dz);
+                List<Planet> cell = GalaxyLayout.planetsInCell(seed, cellX + dx, cellY + dy, cellZ + dz);
                 if (cell.isEmpty() || !matches(cell, kind)) {
                     continue;
                 }
@@ -105,6 +112,7 @@ public final class GalaxyCommands {
                     best = distance;
                     found = planet;
                 }
+            }
             }
         }
         if (found == null) {
@@ -136,25 +144,18 @@ public final class GalaxyCommands {
             return 0;
         }
         long seed = level.getSeed();
-        int cellX = GalaxyLayout.cellOf(player.getX());
-        int cellZ = GalaxyLayout.cellOf(player.getZ());
         Blooms.Leaf found = null;
         double best = Double.MAX_VALUE;
-        int cells = 8;
-        for (int dx = -cells; dx <= cells; dx++) {
-            for (int dz = -cells; dz <= cells; dz++) {
-                for (Planet planet : GalaxyLayout.planetsInCell(seed, cellX + dx, cellZ + dz)) {
-                    var bloom = Blooms.bloom(seed, planet);
-                    if (bloom.isEmpty()) {
-                        continue;
-                    }
-                    for (Blooms.Leaf leaf : bloom.get().leaves()) {
-                        double distance = leaf.standSpot().distanceToSqr(player.position());
-                        if (leaf.linked() && distance < best && distance > 4.0) {
-                            best = distance;
-                            found = leaf;
-                        }
-                    }
+        for (Planet planet : GalaxyLayout.planetsNear(seed, player.position(), 3)) {
+            var bloom = Blooms.bloom(seed, planet);
+            if (bloom.isEmpty()) {
+                continue;
+            }
+            for (Blooms.Leaf leaf : bloom.get().leaves()) {
+                double distance = leaf.standSpot().distanceToSqr(player.position());
+                if (leaf.linked() && distance < best && distance > 4.0) {
+                    best = distance;
+                    found = leaf;
                 }
             }
         }
@@ -172,7 +173,7 @@ public final class GalaxyCommands {
         return 1;
     }
 
-    private static int go(CommandContext<CommandSourceStack> ctx, int number) throws CommandSyntaxException {
+    private static int go(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         MinecraftServer server = ctx.getSource().getServer();
         ServerLevel galaxyLevel = server.getLevel(PlanetGravityLink.GALAXY);
@@ -181,15 +182,38 @@ public final class GalaxyCommands {
                     "The galaxy dimension isn't loaded. Is Galaxy Generation installed on the server?"));
             return 0;
         }
-        Planet planet = GalaxyLayout.arrivalPlanet(galaxyLevel.getSeed(), number);
+        Planet planet = GalaxyLayout.arrivalPlanet(galaxyLevel.getSeed());
         Vec3 spot = planet.landingSpot();
         // Gravity first, so it's already there when the player arrives.
         PlanetGravityLink.addPlanetsAround(galaxyLevel, spot, true);
         player.teleportTo(galaxyLevel, spot.x, spot.y, spot.z, Set.of(), player.getYRot(), 0.0F, true);
-        Galaxy galaxy = Galaxy.of(galaxyLevel.getSeed(), number);
+        GalaxyClock.markInCurrentGalaxy(player);
+        Galaxy galaxy = Galaxy.current(galaxyLevel.getSeed());
         ctx.getSource().sendSuccess(() -> Component.literal(String.format(
                 "Welcome to galaxy %d: %s planets are common here. You're on a %s planet.",
-                number, describe(galaxy), planet.theme().displayName())), false);
+                galaxy.number(), describe(galaxy), planet.theme().displayName())), false);
+        return 1;
+    }
+
+    private static int timer(CommandContext<CommandSourceStack> ctx) {
+        GalaxyCycle cycle = GalaxyCycle.get(ctx.getSource().getServer());
+        ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                "Galaxy %d collapses in %s (it lasts %s in all). The clock only runs while someone is online.",
+                GalaxyCycle.number(), GalaxyClock.duration(cycle.ticksLeft()), GalaxyClock.duration(cycle.life()))),
+                false);
+        return 1;
+    }
+
+    private static int setTimer(CommandContext<CommandSourceStack> ctx, int minutes) {
+        GalaxyClock.setTimeLeft(ctx.getSource().getServer(), Math.max(1, minutes * 60L * 20L));
+        ctx.getSource().sendSuccess(() -> Component.literal(minutes == 0
+                ? "The galaxy collapses now."
+                : "Galaxy " + GalaxyCycle.number() + " now collapses in " + minutes + " minutes."), true);
+        return 1;
+    }
+
+    private static int next(CommandContext<CommandSourceStack> ctx) {
+        GalaxyClock.collapse(ctx.getSource().getServer());
         return 1;
     }
 
@@ -216,10 +240,12 @@ public final class GalaxyCommands {
             ctx.getSource().sendSuccess(() -> Component.literal("Deep space: no galaxy here."), false);
             return 0;
         }
-        Galaxy galaxy = Galaxy.of(level.getSeed(), number);
+        Galaxy galaxy = Galaxy.current(level.getSeed());
         StringBuilder text = new StringBuilder(String.format(
-                "Galaxy %d: %d blocks wide, common planets: %s.", number, galaxy.radius() * 2, describe(galaxy)));
-        GalaxyLayout.planetsInCell(level.getSeed(), GalaxyLayout.cellOf(pos.x), GalaxyLayout.cellOf(pos.z))
+                "Galaxy %d: %d blocks wide, %d tall, common planets: %s. Collapses in %s.", number,
+                galaxy.radius() * 2, galaxy.thickness() * 2, describe(galaxy),
+                GalaxyClock.duration(GalaxyCycle.get(ctx.getSource().getServer()).ticksLeft())));
+        GalaxyLayout.planetsNear(level.getSeed(), pos, 1)
                 .stream()
                 .min(java.util.Comparator.comparingDouble(p -> p.gravityField().distanceToSurface(pos)))
                 .ifPresent(planet -> text.append(String.format(
@@ -232,7 +258,7 @@ public final class GalaxyCommands {
         return 1;
     }
 
-    private static String describe(Galaxy galaxy) {
+    static String describe(Galaxy galaxy) {
         return String.join(", ", galaxy.favorites().stream().map(PlanetTheme::displayName).toList());
     }
 }
