@@ -22,6 +22,18 @@ import io.github.chocodanette.galaxy.gravity.PlanetNavigator;
  */
 @Mixin(GroundPathNavigation.class)
 public abstract class GroundPathNavigationMixin {
+    /** Chasing someone on a planet's side: aim for the cell their feet are in. */
+    @Inject(method = "createPath(Lnet/minecraft/world/entity/Entity;I)Lnet/minecraft/world/level/pathfinder/Path;",
+            at = @At("HEAD"), cancellable = true)
+    private void galaxy$createPathToEntity(net.minecraft.world.entity.Entity target, int reachRange,
+            CallbackInfoReturnable<@Nullable Path> cir) {
+        PathNavigation self = (PathNavigation) (Object) this;
+        if (MobPlanetAI.walkingUp(((PathNavigationAccess) self).galaxy$mob()) != null) {
+            cir.setReturnValue(((PlanetNavigator) self).galaxy$planetPath(
+                    ImmutableSet.of(io.github.chocodanette.galaxy.gravity.GravityFrames.feetBlock(target)), reachRange));
+        }
+    }
+
     @Inject(method = "createPath(Lnet/minecraft/core/BlockPos;I)Lnet/minecraft/world/level/pathfinder/Path;",
             at = @At("HEAD"), cancellable = true)
     private void galaxy$createPath(BlockPos pos, int reachRange, CallbackInfoReturnable<@Nullable Path> cir) {
