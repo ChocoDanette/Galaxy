@@ -16,14 +16,15 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import io.github.chocodanette.galaxy.gravity.GravityFrames;
+import io.github.chocodanette.galaxy.worldgen.BloomRides;
 import io.github.chocodanette.galaxy.worldgen.GalaxyCycle;
 import io.github.chocodanette.galaxy.worldgen.GalaxyLayout;
 import io.github.chocodanette.galaxy.worldgen.Planet;
 import io.github.chocodanette.galaxy.worldgen.PlanetGravityLink;
 
 /**
- * Moving the crew around: diving from the station into the galaxy, coming back with
- * {@code /station}, and making the station everyone's home (new players start there, and
+ * Moving the crew around: diving from the station into the galaxy, coming back on a Homeward
+ * Bloom (or {@code /station} for operators), and making the station everyone's home (new players start there, and
  * players who die without a bed wake up there).
  */
 public final class StationCrew {
@@ -39,6 +40,13 @@ public final class StationCrew {
         NeoForge.EVENT_BUS.addListener(StationCrew::onLogin);
         NeoForge.EVENT_BUS.addListener(StationCrew::onRespawn);
         NeoForge.EVENT_BUS.addListener(StationCrew::onPlayerTick);
+        // The top of a Homeward Bloom's throw lands you on the station.
+        BloomRides.setHomeward(StationCrew::homeFromBloom);
+    }
+
+    private static void homeFromBloom(ServerPlayer player) {
+        toStation(player);
+        player.sendOverlayMessage(Component.translatable("galaxy_ship.homeward"));
     }
 
     /** Teleports a player onto the station's deck. */

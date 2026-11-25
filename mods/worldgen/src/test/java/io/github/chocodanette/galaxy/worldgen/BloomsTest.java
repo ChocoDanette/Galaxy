@@ -18,8 +18,13 @@ class BloomsTest {
 
     /** Every planet of the first galaxies. */
     private static List<Planet> planets(int galaxies) {
+        return planets(1, galaxies);
+    }
+
+    /** Every planet of galaxies first to last (the last one stays current). */
+    private static List<Planet> planets(int first, int last) {
         List<Planet> planets = new ArrayList<>();
-        for (int number = 1; number <= galaxies; number++) {
+        for (int number = first; number <= last; number++) {
             GalaxyCycle.setCurrentForTests(number, number);
             GalaxyLayout.allCells(SEED).forEach(planets::addAll);
         }
@@ -117,5 +122,44 @@ class BloomsTest {
         for (int t = 1; t <= path.ticks(); t++) {
             assertTrue(path.atTick(t).distanceTo(path.atTick(t - 1)) < 4.0);
         }
+    }
+
+    @Test
+    void homewardBloomsAreRareNeverOnTheArrivalPlanetAndThrowYouHome() {
+        int big = 0;
+        int homeward = 0;
+        for (int number = 1; number <= 3; number++) {
+          GalaxyCycle.setCurrentForTests(number, number);
+          Planet arrival = GalaxyLayout.arrivalPlanet(SEED);
+          for (Planet planet : planets(number, number)) {
+            if (!Blooms.canGrowBloom(planet)) {
+                continue;
+            }
+            big++;
+            if (!Blooms.isHomeward(SEED, planet)) {
+                continue;
+            }
+            homeward++;
+            assertTrue(!arrival.center().equals(planet.center()), "homeward on the arrival planet");
+            assertTrue(Blooms.links(SEED, planet).isEmpty(), "a Homeward Bloom planet with Launch Bloom links");
+            Optional<Blooms.Bloom> bloom = Blooms.bloom(SEED, planet);
+            if (bloom.isEmpty()) {
+                continue; // no room for it on this planet
+            }
+            assertTrue(bloom.get().homeward());
+            long homes = bloom.get().leaves().stream().filter(Blooms.Leaf::home).count();
+            assertEquals(1, homes, "one leaf throws you home");
+            Blooms.Leaf home = bloom.get().leaves().stream().filter(Blooms.Leaf::home).findFirst().orElseThrow();
+            assertTrue(bloom.get().blocks().stream().anyMatch(b -> b.pos().equals(home.pad()) && b.part() == Blooms.Part.HOME_PAD));
+            assertEquals(home, Blooms.leafAt(SEED, home.pad()).orElseThrow());
+            BloomPath path = BloomRides.pathFrom(SEED, home.pad()).orElseThrow();
+            Vec3 rise = path.end().subtract(path.start());
+            assertEquals(BloomRides.HOME_RISE, rise.length(), 1.0E-6);
+            assertTrue(rise.normalize().dot(home.up().getUnitVec3()) > 0.999, "the way home goes straight up");
+          }
+        }
+        assertTrue(homeward > 0, "no Homeward Bloom in 3 galaxies");
+        // About 1 in 15 big planets: well under the share that grows a normal Launch Bloom.
+        assertTrue(homeward < big / 6, homeward + " homeward out of " + big);
     }
 }
