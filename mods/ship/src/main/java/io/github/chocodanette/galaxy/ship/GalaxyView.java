@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import io.github.chocodanette.galaxy.worldgen.GalaxyCycle;
 import io.github.chocodanette.galaxy.worldgen.GalaxyLayout;
 import io.github.chocodanette.galaxy.worldgen.Material;
 import io.github.chocodanette.galaxy.worldgen.Planet;
@@ -28,8 +29,9 @@ public final class GalaxyView {
     static final double SPACING = 5.0;
     /** Real planet sizes are divided by this. */
     static final double SIZE = 3.0;
-    /** How many cells around the arrival planet are shown, in each direction. */
+    /** How many cells around the arrival planet are shown, across and up and down. */
     static final int CELLS = 3;
+    static final int CELLS_UP = 2;
     /** Box the model fits in, around {@link StationLocation#VIEW_CENTER}: cleared before drawing. */
     static final int HALF_WIDTH = 70;
     static final int HALF_HEIGHT = 30;
@@ -42,19 +44,22 @@ public final class GalaxyView {
     }
 
     /** The planets to show for a galaxy, with where each goes. */
-    static List<Model> models(long seed, int galaxy) {
-        Planet arrival = GalaxyLayout.arrivalPlanet(seed, galaxy);
+    static List<Model> models(long seed) {
+        Planet arrival = GalaxyLayout.arrivalPlanet(seed);
         int cx = GalaxyLayout.cellOf(arrival.center().x);
+        int cy = GalaxyLayout.cellOf(arrival.center().y);
         int cz = GalaxyLayout.cellOf(arrival.center().z);
         List<Model> models = new ArrayList<>();
         for (int x = cx - CELLS; x <= cx + CELLS; x++) {
             for (int z = cz - CELLS; z <= cz + CELLS; z++) {
-                for (Planet planet : GalaxyLayout.planetsInCell(seed, x, z)) {
-                    Vec3 offset = planet.center().subtract(arrival.center()).scale(1.0 / SPACING);
-                    double r = planet.extent() / SIZE;
-                    if (Math.abs(offset.x) + r < HALF_WIDTH && Math.abs(offset.z) + r < HALF_WIDTH
-                            && Math.abs(offset.y) + r < HALF_HEIGHT) {
-                        models.add(new Model(offset, planet));
+                for (int y = cy - CELLS_UP; y <= cy + CELLS_UP; y++) {
+                    for (Planet planet : GalaxyLayout.planetsInCell(seed, x, y, z)) {
+                        Vec3 offset = planet.center().subtract(arrival.center()).scale(1.0 / SPACING);
+                        double r = planet.extent() / SIZE;
+                        if (Math.abs(offset.x) + r < HALF_WIDTH && Math.abs(offset.z) + r < HALF_WIDTH
+                                && Math.abs(offset.y) + r < HALF_HEIGHT) {
+                            models.add(new Model(offset, planet));
+                        }
                     }
                 }
             }
@@ -70,7 +75,7 @@ public final class GalaxyView {
     /** Same, and also when {@code missing} says the model isn't there any more. */
     static void refresh(MinecraftServer server, boolean missing) {
         StationData data = StationData.get(server);
-        if (missing || data.viewGalaxy() != data.galaxy()) {
+        if (missing || data.viewGalaxy() != GalaxyCycle.number()) {
             rebuild(server);
         }
     }
@@ -96,12 +101,12 @@ public final class GalaxyView {
             }
         }
         int count = 0;
-        for (Model model : models(galaxy.getSeed(), data.galaxy())) {
+        for (Model model : models(galaxy.getSeed())) {
             draw(station, c, model);
             count++;
         }
-        data.setViewGalaxy(data.galaxy());
-        GalaxyShip.LOGGER.info("Drew {} planets of galaxy {} below the station", count, data.galaxy());
+        data.setViewGalaxy(GalaxyCycle.number());
+        GalaxyShip.LOGGER.info("Drew {} planets of galaxy {} below the station", count, GalaxyCycle.number());
     }
 
     /** Draws one shrunk planet: solid wherever the real planet is solid at the matching spot. */
