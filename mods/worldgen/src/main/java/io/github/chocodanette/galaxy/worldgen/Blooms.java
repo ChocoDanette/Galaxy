@@ -111,8 +111,8 @@ public final class Blooms {
         if (roll >= HOMEWARD_CHANCE) {
             return false;
         }
-        int number = Galaxy.numberAt(planet.center().x);
-        return number == 0 || GalaxyLayout.arrivalPlanet(worldSeed, number).seed() != planet.seed();
+        // Never on the arrival planet, where you land when you dive in.
+        return !GalaxyLayout.arrivalPlanet(worldSeed).center().equals(planet.center());
     }
 
     /** True when this planet can be linked to others by normal Launch Blooms. */
@@ -137,20 +137,14 @@ public final class Blooms {
             return List.of();
         }
         int reach = (int) Math.ceil((MAX_GAP + 2 * GalaxyLayout.MAX_EXTENT) / GalaxyLayout.CELL_SIZE) + 1;
-        int cx = GalaxyLayout.cellOf(planet.center().x);
-        int cz = GalaxyLayout.cellOf(planet.center().z);
         List<Planet> found = new ArrayList<>();
-        for (int x = cx - reach; x <= cx + reach; x++) {
-            for (int z = cz - reach; z <= cz + reach; z++) {
-                for (Planet other : GalaxyLayout.planetsInCell(worldSeed, x, z)) {
-                    if (other.equals(planet) || !canLink(worldSeed, other)) {
-                        continue;
-                    }
-                    double gap = gap(planet, other);
-                    if (gap >= MIN_GAP && gap <= MAX_GAP && pairRoll(planet, other) < LINK_CHANCE) {
-                        found.add(other);
-                    }
-                }
+        for (Planet other : GalaxyLayout.planetsNear(worldSeed, planet.center(), reach)) {
+            if (other.equals(planet) || !canLink(worldSeed, other)) {
+                continue;
+            }
+            double gap = gap(planet, other);
+            if (gap >= MIN_GAP && gap <= MAX_GAP && pairRoll(planet, other) < LINK_CHANCE) {
+                found.add(other);
             }
         }
         found.sort(Comparator.comparingDouble(other -> pairRoll(planet, other)));
@@ -171,7 +165,7 @@ public final class Blooms {
     // ---------------------------------------------------------------- blooms
 
     private static final Map<Planet, Optional<Bloom>> CACHE = new ConcurrentHashMap<>();
-    private static final int CACHE_LIMIT = 512;
+    private static final int CACHE_LIMIT = 4096;
 
     /** The planet's bloom, if it has any link. Worked out once and kept. */
     public static Optional<Bloom> bloom(long worldSeed, Planet planet) {

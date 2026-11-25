@@ -1,6 +1,5 @@
 package io.github.chocodanette.galaxy.ship;
 
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
@@ -11,13 +10,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
-import io.github.chocodanette.galaxy.worldgen.Galaxy;
+import io.github.chocodanette.galaxy.worldgen.GalaxyClock;
+import io.github.chocodanette.galaxy.worldgen.GalaxyCycle;
 
 /**
  * <pre>
  * /station                  go back to the station                    (operators, for testing)
  * /station info             which galaxy is below the station        (operators)
- * /station galaxy &lt;number&gt;  put another galaxy below the station       (operators)
+ *                           (/galaxy next replaces the galaxy)
  * /station rebuild          put the station and the galaxy model back (operators)
  * </pre>
  */
@@ -37,10 +37,6 @@ public final class StationCommands {
                 .then(Commands.literal("info")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(StationCommands::info))
-                .then(Commands.literal("galaxy")
-                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-                        .then(Commands.argument("number", IntegerArgumentType.integer(1, Galaxy.MAX_NUMBER))
-                                .executes(ctx -> galaxy(ctx, IntegerArgumentType.getInteger(ctx, "number")))))
                 .then(Commands.literal("rebuild")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(StationCommands::rebuild)));
@@ -54,17 +50,9 @@ public final class StationCommands {
     }
 
     private static int info(CommandContext<CommandSourceStack> ctx) {
-        StationData data = StationData.get(ctx.getSource().getServer());
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "The station floats above galaxy " + data.galaxy() + "."), false);
-        return 1;
-    }
-
-    private static int galaxy(CommandContext<CommandSourceStack> ctx, int number) {
-        StationData.get(ctx.getSource().getServer()).setGalaxy(number);
-        GalaxyView.refresh(ctx.getSource().getServer());
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "The station now floats above galaxy " + number + "."), true);
+        GalaxyCycle cycle = GalaxyCycle.get(ctx.getSource().getServer());
+        ctx.getSource().sendSuccess(() -> Component.literal("The station floats above galaxy " + GalaxyCycle.number()
+                + ", which collapses in " + GalaxyClock.duration(cycle.ticksLeft()) + "."), false);
         return 1;
     }
 

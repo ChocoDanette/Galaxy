@@ -18,16 +18,15 @@ class BloomsTest {
 
     /** Every planet of the first galaxies. */
     private static List<Planet> planets(int galaxies) {
+        return planets(1, galaxies);
+    }
+
+    /** Every planet of galaxies first to last (the last one stays current). */
+    private static List<Planet> planets(int first, int last) {
         List<Planet> planets = new ArrayList<>();
-        for (int number = 1; number <= galaxies; number++) {
-            Galaxy galaxy = Galaxy.of(SEED, number);
-            int reach = galaxy.radius() / GalaxyLayout.CELL_SIZE + 1;
-            int middle = GalaxyLayout.cellOf(galaxy.centerX());
-            for (int cx = middle - reach; cx <= middle + reach; cx++) {
-                for (int cz = -reach; cz <= reach; cz++) {
-                    planets.addAll(GalaxyLayout.planetsInCell(SEED, cx, cz));
-                }
-            }
+        for (int number = first; number <= last; number++) {
+            GalaxyCycle.setCurrentForTests(number, number);
+            GalaxyLayout.allCells(SEED).forEach(planets::addAll);
         }
         return planets;
     }
@@ -35,7 +34,7 @@ class BloomsTest {
     @Test
     void linksGoBothWaysBetweenNearbyPlanets() {
         int links = 0;
-        for (Planet planet : planets(2)) {
+        for (Planet planet : planets(1)) {
             List<Planet> partners = Blooms.links(SEED, planet);
             assertTrue(partners.size() <= Blooms.LEAVES);
             for (Planet partner : partners) {
@@ -52,7 +51,7 @@ class BloomsTest {
     void everyLinkedLeafLandsOnALeafThatThrowsYouBack() {
         int linked = 0;
         int blooms = 0;
-        for (Planet planet : planets(2)) {
+        for (Planet planet : planets(1)) {
             Optional<Blooms.Bloom> bloom = Blooms.bloom(SEED, planet);
             if (bloom.isEmpty()) {
                 continue;
@@ -129,7 +128,10 @@ class BloomsTest {
     void homewardBloomsAreRareNeverOnTheArrivalPlanetAndThrowYouHome() {
         int big = 0;
         int homeward = 0;
-        for (Planet planet : planets(4)) {
+        for (int number = 1; number <= 3; number++) {
+          GalaxyCycle.setCurrentForTests(number, number);
+          Planet arrival = GalaxyLayout.arrivalPlanet(SEED);
+          for (Planet planet : planets(number, number)) {
             if (!Blooms.canGrowBloom(planet)) {
                 continue;
             }
@@ -138,8 +140,7 @@ class BloomsTest {
                 continue;
             }
             homeward++;
-            int number = Galaxy.numberAt(planet.center().x);
-            assertTrue(GalaxyLayout.arrivalPlanet(SEED, number).seed() != planet.seed(), "homeward on the arrival planet");
+            assertTrue(!arrival.center().equals(planet.center()), "homeward on the arrival planet");
             assertTrue(Blooms.links(SEED, planet).isEmpty(), "a Homeward Bloom planet with Launch Bloom links");
             Optional<Blooms.Bloom> bloom = Blooms.bloom(SEED, planet);
             if (bloom.isEmpty()) {
@@ -155,8 +156,9 @@ class BloomsTest {
             Vec3 rise = path.end().subtract(path.start());
             assertEquals(BloomRides.HOME_RISE, rise.length(), 1.0E-6);
             assertTrue(rise.normalize().dot(home.up().getUnitVec3()) > 0.999, "the way home goes straight up");
+          }
         }
-        assertTrue(homeward > 0, "no Homeward Bloom in 4 galaxies");
+        assertTrue(homeward > 0, "no Homeward Bloom in 3 galaxies");
         // About 1 in 15 big planets: well under the share that grows a normal Launch Bloom.
         assertTrue(homeward < big / 6, homeward + " homeward out of " + big);
     }

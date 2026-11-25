@@ -8,6 +8,9 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 
+import io.github.chocodanette.galaxy.worldgen.GalaxyClock;
+import io.github.chocodanette.galaxy.worldgen.GalaxyCycle;
+
 /**
  * Entry point for Galaxy Station (mod id kept as {@code galaxy_ship} so existing installs
  * keep working): the crew's shared home.
@@ -28,6 +31,9 @@ public final class GalaxyShip {
         StationRules.register();
         StationCrew.register();
         StationCommands.register();
+        // When a galaxy collapses, its crew comes home to the station, and the model below shows the new one.
+        GalaxyClock.setRecall(StationCrew::toStation);
+        GalaxyCycle.onNewGalaxy(GalaxyView::refresh);
         LOGGER.info("Galaxy Station loaded");
     }
 }

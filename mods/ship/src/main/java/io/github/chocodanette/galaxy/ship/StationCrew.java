@@ -17,6 +17,7 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import io.github.chocodanette.galaxy.gravity.GravityFrames;
 import io.github.chocodanette.galaxy.worldgen.BloomRides;
+import io.github.chocodanette.galaxy.worldgen.GalaxyCycle;
 import io.github.chocodanette.galaxy.worldgen.GalaxyLayout;
 import io.github.chocodanette.galaxy.worldgen.Planet;
 import io.github.chocodanette.galaxy.worldgen.PlanetGravityLink;
@@ -70,8 +71,8 @@ public final class StationCrew {
             toStation(player);
             return;
         }
-        int number = StationData.get(server).galaxy();
-        Planet planet = GalaxyLayout.arrivalPlanet(galaxyLevel.getSeed(), number);
+        int number = GalaxyCycle.number();
+        Planet planet = GalaxyLayout.arrivalPlanet(galaxyLevel.getSeed());
         Vec3 ground = planet.landingSpot();
         Vec3 spot = ground.add(0, DROP_HEIGHT, 0);
         // Gravity first, so it's already there when the player arrives.

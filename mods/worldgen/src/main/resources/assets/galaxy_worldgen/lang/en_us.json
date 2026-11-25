@@ -16,5 +16,11 @@
   "block.galaxy_worldgen.homeward_petal": "Homeward Bloom Petal",
   "block.galaxy_worldgen.homeward_core": "Homeward Bloom Heart",
   "galaxy_worldgen.bloom.home_hint": "A Homeward Bloom! Crouch to see the way home, then jump",
-  "galaxy_worldgen.bloom.no_station": "This bloom has nowhere to send you (Galaxy Station isn't installed)"
+  "galaxy_worldgen.bloom.no_station": "This bloom has nowhere to send you (Galaxy Station isn't installed)",
+  "galaxy_worldgen.clock.bar": "Galaxy %s collapses in %s",
+  "galaxy_worldgen.clock.warning": "Galaxy %s collapses in %s! Anything left in it will be lost.",
+  "galaxy_worldgen.clock.final": "The galaxy collapses in %s...",
+  "galaxy_worldgen.clock.recalled": "Galaxy %s collapsed. You were pulled back home with what you carried.",
+  "galaxy_worldgen.clock.collapsed_away": "Galaxy %s collapsed while you were away. You were brought back home.",
+  "galaxy_worldgen.clock.collapsed": "Galaxy %s is gone. A new one formed: galaxy %s, where %s planets are common. It lasts %s."
 }

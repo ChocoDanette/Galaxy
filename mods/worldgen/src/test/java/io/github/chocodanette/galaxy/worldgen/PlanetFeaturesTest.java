@@ -150,15 +150,10 @@ class PlanetFeaturesTest {
     private static List<List<Planet>> gatewayGroups() {
         List<List<Planet>> groups = new ArrayList<>();
         for (int number = 1; number <= 4; number++) {
-            Galaxy galaxy = Galaxy.of(SEED, number);
-            int reach = galaxy.radius() / GalaxyLayout.CELL_SIZE + 1;
-            int middle = GalaxyLayout.cellOf(galaxy.centerX());
-            for (int cx = middle - reach; cx <= middle + reach; cx++) {
-                for (int cz = -reach; cz <= reach; cz++) {
-                    List<Planet> planets = GalaxyLayout.planetsInCell(SEED, cx, cz);
-                    if (planets.size() > 1) {
-                        groups.add(planets);
-                    }
+            GalaxyCycle.setCurrentForTests(number, number);
+            for (List<Planet> planets : GalaxyLayout.allCells(SEED)) {
+                if (planets.size() > 1) {
+                    groups.add(planets);
                 }
             }
         }
@@ -214,16 +209,12 @@ class PlanetFeaturesTest {
     void galaxiesHaveHollowPlanets() {
         long hollow = 0;
         for (int number = 1; number <= 3; number++) {
-            Galaxy galaxy = Galaxy.of(SEED, number);
-            int reach = galaxy.radius() / GalaxyLayout.CELL_SIZE + 1;
-            int middle = GalaxyLayout.cellOf(galaxy.centerX());
-            for (int cx = middle - reach; cx <= middle + reach; cx++) {
-                for (int cz = -reach; cz <= reach; cz++) {
-                    hollow += GalaxyLayout.planetsInCell(SEED, cx, cz).stream()
-                            .filter(p -> p.shape() == GravityField.Shape.HOLLOW)
-                            .peek(p -> assertTrue(p.radius() >= GalaxyLayout.MIN_HOLLOW_RADIUS))
-                            .count();
-                }
+            GalaxyCycle.setCurrentForTests(number, number);
+            for (List<Planet> cell : GalaxyLayout.allCells(SEED)) {
+                hollow += cell.stream()
+                        .filter(p -> p.shape() == GravityField.Shape.HOLLOW)
+                        .peek(p -> assertTrue(p.radius() >= GalaxyLayout.MIN_HOLLOW_RADIUS))
+                        .count();
             }
         }
         assertTrue(hollow > 5, "only " + hollow + " hollow planets");
