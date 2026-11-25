@@ -62,7 +62,12 @@ public final class StationBuilder {
         if (!data.upToDate() || station.getBlockState(StationLocation.ORIGIN.below()).isAir()) {
             build(station);
             data.setBuilt();
+            data.setExtrasBuilt();
             GalaxyShip.LOGGER.info("Built the crew's station");
+        } else if (!data.extrasUpToDate()) {
+            buildExtras(station);
+            data.setExtrasBuilt();
+            GalaxyShip.LOGGER.info("Added the trader and the bloom to the common station");
         }
         GalaxyView.refresh(server, station.getBlockState(StationLocation.VIEW_CENTER).isAir());
     }
@@ -104,10 +109,23 @@ public final class StationBuilder {
             set(level, post.above(), Blocks.LANTERN.defaultBlockState());
         }
         buildHut(level, o, connecting);
+        buildExtras(level);
         // Fences and glass panes join up with their neighbours once everything is placed.
         for (BlockPos pos : connecting) {
             set(level, pos, Block.updateFromNeighbourShapes(level.getBlockState(pos), level, pos));
         }
+    }
+
+    /**
+     * Later additions, placed into the existing deck: the trader on the west side (it sells the
+     * space rock that founds your own station) and, on the east side, a Launch Bloom that
+     * throws you to your crew's station.
+     */
+    static void buildExtras(ServerLevel level) {
+        BlockPos o = StationLocation.ORIGIN;
+        set(level, o.offset(-4, 0, -1), StationItems.TRADER.get().defaultBlockState());
+        set(level, o.offset(-4, 1, -1), Blocks.LANTERN.defaultBlockState());
+        StationPlots.placeBloom(level, o.offset(4, -1, -1), Direction.EAST);
     }
 
     /** A small spruce hut at the back of the deck, door facing the walkway. */

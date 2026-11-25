@@ -1,5 +1,6 @@
 package io.github.chocodanette.galaxy.ship;
 
+import java.util.Optional;
 import java.util.Set;
 
 import net.minecraft.core.BlockPos;
@@ -16,6 +17,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import io.github.chocodanette.galaxy.gravity.GravityFrames;
+import io.github.chocodanette.galaxy.ship.crew.Crew;
 import io.github.chocodanette.galaxy.worldgen.BloomRides;
 import io.github.chocodanette.galaxy.worldgen.GalaxyCycle;
 import io.github.chocodanette.galaxy.worldgen.GalaxyLayout;
@@ -23,9 +25,10 @@ import io.github.chocodanette.galaxy.worldgen.Planet;
 import io.github.chocodanette.galaxy.worldgen.PlanetGravityLink;
 
 /**
- * Moving the crew around: diving from the station into the galaxy, coming back on a Homeward
- * Bloom (or {@code /station} for operators), and making the station everyone's home (new players start there, and
- * players who die without a bed wake up there).
+ * Moving the crew around: diving from a station into the galaxy, coming back on a Homeward
+ * Bloom (or {@code /station} for operators), and making the station everyone's home (new
+ * players start on the common station; players who die without a bed wake up on their crew's
+ * station, or the common one). Coming home always means your crew's own station if it has one.
  */
 public final class StationCrew {
     /** Tag given to a player the first time they're brought to the station. */
@@ -49,14 +52,30 @@ public final class StationCrew {
         player.sendOverlayMessage(Component.translatable("galaxy_ship.homeward"));
     }
 
-    /** Teleports a player onto the station's deck. */
+    /**
+     * Brings a player home: onto their crew's own station if it has one, otherwise onto the
+     * common station's deck. Everything that sends players back up uses this.
+     */
     public static void toStation(ServerPlayer player) {
+        Optional<Crew> own = StationPlots.stationOf(player);
+        if (own.isPresent()) {
+            teleport(player, StationPlots.spawn(own.get().plot), StationLocation.SPAWN_YAW);
+        } else {
+            toCommonStation(player);
+        }
+    }
+
+    /** Teleports a player onto the common station's deck, where everyone starts. */
+    public static void toCommonStation(ServerPlayer player) {
+        teleport(player, StationLocation.SPAWN, StationLocation.SPAWN_YAW);
+    }
+
+    private static void teleport(ServerPlayer player, Vec3 spot, float yaw) {
         ServerLevel station = StationLocation.level(player.level().getServer());
         if (station == null) {
             return;
         }
-        Vec3 spot = StationLocation.SPAWN;
-        player.teleportTo(station, spot.x, spot.y, spot.z, Set.of(), StationLocation.SPAWN_YAW, 0.0F, true);
+        player.teleportTo(station, spot.x, spot.y, spot.z, Set.of(), yaw, 0.0F, true);
         player.setDeltaMovement(Vec3.ZERO);
         player.resetFallDistance();
         station.playSound(null, spot.x, spot.y, spot.z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.6F, 1.2F);
@@ -95,9 +114,13 @@ public final class StationCrew {
         }
     }
 
-    /** Makes a player respawn on the station, unless they set a bed somewhere. */
-    private static void makeStationHome(ServerPlayer player) {
-        BlockPos spawn = BlockPos.containing(StationLocation.SPAWN);
+    /**
+     * Makes a player respawn on their station (their crew's own, or else the common one),
+     * unless they set a bed somewhere.
+     */
+    public static void makeStationHome(ServerPlayer player) {
+        Optional<Crew> own = StationPlots.stationOf(player);
+        BlockPos spawn = BlockPos.containing(own.map(c -> StationPlots.spawn(c.plot)).orElse(StationLocation.SPAWN));
         player.setRespawnPosition(new ServerPlayer.RespawnConfig(
                 LevelData.RespawnData.of(StationLocation.STATION, spawn, StationLocation.SPAWN_YAW, 0.0F), true), false);
     }
@@ -106,7 +129,7 @@ public final class StationCrew {
         if (event.getEntity() instanceof ServerPlayer player && !player.entityTags().contains(ARRIVED_TAG)) {
             player.addTag(ARRIVED_TAG);
             makeStationHome(player);
-            toStation(player);
+            toCommonStation(player);
             player.sendSystemMessage(Component.translatable("galaxy_ship.welcome"), false);
         }
     }
@@ -118,6 +141,10 @@ public final class StationCrew {
         // No bed left (it was broken, or never set): the station takes them in.
         if (player.getRespawnConfig() == null
                 || player.getRespawnConfig().respawnData().dimension().equals(OLD_SHIP)) {
+            makeStationHome(player);
+            toStation(player);
+        } else if (StationLocation.isStation(player.level()) && !StationRules.belongsAt(player, player.blockPosition())) {
+            // Their bed is on a station whose crew they've left (or were kicked from).
             makeStationHome(player);
             toStation(player);
         }
