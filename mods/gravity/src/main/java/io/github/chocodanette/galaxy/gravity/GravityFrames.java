@@ -81,6 +81,35 @@ public final class GravityFrames {
         return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
+    /**
+     * Grows a box by {@code flat} along the ground and {@code up} along the entity's own "up",
+     * like vanilla's {@code inflate(flat, up, flat)} for an upright entity. Vanilla code that
+     * reaches around an entity (picking up items, melee reach) assumes world Y is up, which on
+     * a planet's side would give a thin reach along one direction of the face.
+     */
+    public static AABB inflateAlongFrame(Entity entity, AABB box, double flat, double up) {
+        GravityFrame frame = tilted(entity);
+        if (frame == null) {
+            return box.inflate(flat, up, flat);
+        }
+        Direction.Axis axis = boxAxis(frame).getAxis();
+        return box.inflate(axis == Direction.Axis.X ? up : flat, axis == Direction.Axis.Y ? up : flat,
+                axis == Direction.Axis.Z ? up : flat);
+    }
+
+    /**
+     * The block an entity stands in: its feet cell along its own "up". On a planet's
+     * underside (or west or north side) the feet sit exactly on the boundary of the block
+     * they stand on, so vanilla's {@code blockPosition()} names the ground instead.
+     */
+    public static BlockPos feetBlock(Entity entity) {
+        GravityFrame frame = tilted(entity);
+        if (frame == null) {
+            return entity.blockPosition();
+        }
+        return BlockPos.containing(entity.position().add(boxAxis(frame).getUnitVec3().scale(0.5)));
+    }
+
     private static void onEntityTick(EntityTickEvent.Pre event) {
         if (!(event.getEntity() instanceof LivingEntity entity)) {
             return;
