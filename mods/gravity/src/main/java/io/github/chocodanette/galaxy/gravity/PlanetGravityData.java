@@ -142,4 +142,11 @@ public final class PlanetGravityData extends SavedData {
         fields.clear();
         setDirty();
     }
+
+    /** Forgets every planet and home planet, for a dimension whose planets are all gone. */
+    public void reset() {
+        fields.clear();
+        anchors.clear();
+        setDirty();
+    }
 }

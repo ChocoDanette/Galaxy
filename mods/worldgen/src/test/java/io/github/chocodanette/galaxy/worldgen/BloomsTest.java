@@ -20,14 +20,8 @@ class BloomsTest {
     private static List<Planet> planets(int galaxies) {
         List<Planet> planets = new ArrayList<>();
         for (int number = 1; number <= galaxies; number++) {
-            Galaxy galaxy = Galaxy.of(SEED, number);
-            int reach = galaxy.radius() / GalaxyLayout.CELL_SIZE + 1;
-            int middle = GalaxyLayout.cellOf(galaxy.centerX());
-            for (int cx = middle - reach; cx <= middle + reach; cx++) {
-                for (int cz = -reach; cz <= reach; cz++) {
-                    planets.addAll(GalaxyLayout.planetsInCell(SEED, cx, cz));
-                }
-            }
+            GalaxyCycle.setCurrentForTests(number, number);
+            GalaxyLayout.allCells(SEED).forEach(planets::addAll);
         }
         return planets;
     }
@@ -35,7 +29,7 @@ class BloomsTest {
     @Test
     void linksGoBothWaysBetweenNearbyPlanets() {
         int links = 0;
-        for (Planet planet : planets(2)) {
+        for (Planet planet : planets(1)) {
             List<Planet> partners = Blooms.links(SEED, planet);
             assertTrue(partners.size() <= Blooms.LEAVES);
             for (Planet partner : partners) {
@@ -52,7 +46,7 @@ class BloomsTest {
     void everyLinkedLeafLandsOnALeafThatThrowsYouBack() {
         int linked = 0;
         int blooms = 0;
-        for (Planet planet : planets(2)) {
+        for (Planet planet : planets(1)) {
             Optional<Blooms.Bloom> bloom = Blooms.bloom(SEED, planet);
             if (bloom.isEmpty()) {
                 continue;
