@@ -1,8 +1,9 @@
 {
   "galaxy_ship.bed.no_sleep_on_station": "Your spawn point is set. There's no night to sleep through in space",
-  "galaxy_ship.welcome": "Welcome to the station! The galaxy is below: jump off the plank walkway to dive into it. Type /station to come back.",
+  "galaxy_ship.welcome": "Welcome to the station! The galaxy is below: jump off the plank walkway to dive into it. To come back, find a blue Homeward Bloom on a planet.",
   "galaxy_ship.no_building": "You can't build or break anything on the station",
-  "galaxy_ship.entered": "You dove into galaxy %s and drifted down to a %s planet. Type /station to go back up.",
+  "galaxy_ship.entered": "You dove into galaxy %s and drifted down to a %s planet. Blue Homeward Blooms on other planets throw you back up to the station.",
   "galaxy_ship.no_galaxy": "The galaxy dimension isn't loaded. Is Galaxy Generation installed on the server?",
-  "galaxy_ship.returned": "Back on the station"
+  "galaxy_ship.returned": "Back on the station",
+  "galaxy_ship.homeward": "The Homeward Bloom carried you back to the station"
 }
