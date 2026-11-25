@@ -157,7 +157,9 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
 
     @Override
     public void applyBiomeDecoration(WorldGenLevel level, ChunkAccess chunk, StructureManager structureManager) {
-        // Nothing: plants, caves and trees are all built with the ground in buildTerrain.
+        // Plants, caves and trees are all built with the ground in buildTerrain. Shrines need
+        // block entities (spawners, chests) and mobs, so they're built here, once the ground is in.
+        Shrines.decorate(level, chunk);
     }
 
     @Override

@@ -27,8 +27,8 @@ public enum PlanetTheme {
             () -> Blocks.STONE, () -> Blocks.DEEPSLATE, () -> Blocks.DEEPSLATE,
             0.028, new int[] {4, 7, 6, 2, 3, 1, 1}),
     EMBER("ember", () -> Blocks.BLACKSTONE, () -> Blocks.BLACKSTONE, () -> Blocks.BASALT,
-            () -> Blocks.BLACKSTONE, () -> Blocks.DEEPSLATE, () -> Blocks.MAGMA_BLOCK,
-            0.022, new int[] {7, 2, 1, 4, 5, 0, 1}),
+            () -> Blocks.NETHERRACK, () -> Blocks.BLACKSTONE, () -> Blocks.MAGMA_BLOCK,
+            0.032, new int[] {4, 1, 0, 2, 4, 0, 1, 8, 4, 3, 6}),
     MOSSY("mossy", () -> Blocks.MOSS_BLOCK, () -> Blocks.MOSS_BLOCK, () -> Blocks.ROOTED_DIRT,
             () -> Blocks.TUFF, () -> Blocks.DEEPSLATE, () -> Blocks.DEEPSLATE,
             0.018, new int[] {4, 3, 7, 1, 1, 3, 1}),
@@ -40,7 +40,14 @@ public enum PlanetTheme {
             0.018, new int[] {5, 4, 4, 2, 3, 2, 1}),
     CRYSTAL("crystal", () -> Blocks.CALCITE, () -> Blocks.CALCITE, () -> Blocks.CALCITE,
             () -> Blocks.SMOOTH_BASALT, () -> Blocks.DEEPSLATE, () -> Blocks.AMETHYST_BLOCK,
-            0.026, new int[] {2, 3, 2, 3, 3, 4, 4});
+            0.026, new int[] {2, 3, 2, 3, 3, 4, 4}),
+    /**
+     * Rare far-out planets that replace the End: end stone, chorus groves on top and an
+     * obsidian heart. Never a galaxy favorite; {@link GalaxyLayout} places them on its own.
+     */
+    VOID("void", () -> Blocks.END_STONE, () -> Blocks.END_STONE, () -> Blocks.END_STONE,
+            () -> Blocks.END_STONE, () -> Blocks.END_STONE_BRICKS, () -> Blocks.OBSIDIAN,
+            0.010, new int[] {0, 0, 0, 0, 0, 2, 3});
 
     private final String name;
     private final Supplier<Block> top;
@@ -64,6 +71,14 @@ public enum PlanetTheme {
         this.core = core;
         this.oreChance = oreChance;
         this.oreWeights = oreWeights;
+    }
+
+    /** The usual kinds of planets, picked by galaxies; rare kinds (Void) are placed apart. */
+    static final List<PlanetTheme> COMMON = java.util.Arrays.stream(values()).filter(t -> !t.isRare()).toList();
+
+    /** Rare kinds never show up as a galaxy favorite or a normal pick. */
+    boolean isRare() {
+        return this == VOID;
     }
 
     /** Whether planet grass and starblooms grow on this kind of planet. */
@@ -111,7 +126,8 @@ public enum PlanetTheme {
 
     /** How common each {@link Material.Ore} is on this kind of planet, in the enum's order. */
     int oreWeight(Material.Ore ore) {
-        return oreWeights[ore.ordinal()];
+        // Ores added later count as 0 on themes that don't list them.
+        return ore.ordinal() < oreWeights.length ? oreWeights[ore.ordinal()] : 0;
     }
 
     /** The block for one material of this theme. */

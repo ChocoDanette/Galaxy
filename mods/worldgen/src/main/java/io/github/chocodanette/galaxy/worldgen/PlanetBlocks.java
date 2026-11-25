@@ -45,6 +45,13 @@ public final class PlanetBlocks {
             props -> bloom(props, MapColor.COLOR_PINK, 0));
     public static final DeferredBlock<Block> BLOOM_CORE = BLOCKS.registerSimpleBlock("bloom_core",
             props -> bloom(props, MapColor.COLOR_YELLOW, 14));
+    // Homeward Bloom parts: same stem and leaves, blue flower, violet pad that throws you home.
+    public static final DeferredBlock<BloomPadBlock> HOMEWARD_PAD = BLOCKS.registerBlock("homeward_pad",
+            BloomPadBlock::new, props -> bloom(props, MapColor.COLOR_PURPLE, 10));
+    public static final DeferredBlock<Block> HOMEWARD_PETAL = BLOCKS.registerSimpleBlock("homeward_petal",
+            props -> bloom(props, MapColor.COLOR_LIGHT_BLUE, 0));
+    public static final DeferredBlock<Block> HOMEWARD_CORE = BLOCKS.registerSimpleBlock("homeward_core",
+            props -> bloom(props, MapColor.COLOR_CYAN, 14));
 
     static {
         ITEMS.registerSimpleBlockItem(BLOOM_STEM);
@@ -52,6 +59,9 @@ public final class PlanetBlocks {
         ITEMS.registerSimpleBlockItem(BLOOM_PAD);
         ITEMS.registerSimpleBlockItem(BLOOM_PETAL);
         ITEMS.registerSimpleBlockItem(BLOOM_CORE);
+        ITEMS.registerSimpleBlockItem(HOMEWARD_PAD);
+        ITEMS.registerSimpleBlockItem(HOMEWARD_PETAL);
+        ITEMS.registerSimpleBlockItem(HOMEWARD_CORE);
         ITEMS.registerSimpleBlockItem(PLANET_TURF);
         ITEMS.registerSimpleBlockItem(FUNGAL_TURF);
         ITEMS.registerSimpleBlockItem(PLANET_GRASS);
@@ -79,7 +89,15 @@ public final class PlanetBlocks {
             case PAD -> BLOOM_PAD.get();
             case PETAL -> BLOOM_PETAL.get();
             case CORE -> BLOOM_CORE.get();
+            case HOME_PAD -> HOMEWARD_PAD.get();
+            case HOME_PETAL -> HOMEWARD_PETAL.get();
+            case HOME_CORE -> HOMEWARD_CORE.get();
         };
+    }
+
+    /** True for a pad you can jump from: a Launch Bloom pad or a Homeward Bloom pad. */
+    public static boolean isLaunchPad(net.minecraft.world.level.block.state.BlockState state) {
+        return state.is(BLOOM_PAD.get()) || state.is(HOMEWARD_PAD.get());
     }
 
     static void register(IEventBus modEventBus) {
@@ -99,6 +117,9 @@ public final class PlanetBlocks {
             event.accept(BLOOM_PAD.get());
             event.accept(BLOOM_PETAL.get());
             event.accept(BLOOM_CORE.get());
+            event.accept(HOMEWARD_PAD.get());
+            event.accept(HOMEWARD_PETAL.get());
+            event.accept(HOMEWARD_CORE.get());
         }
     }
 }

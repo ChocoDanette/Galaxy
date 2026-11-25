@@ -12,6 +12,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -42,6 +43,8 @@ public final class BloomClient {
     private static @Nullable BlockPos lastPad;
     private static @Nullable BloomPath flight;
     private static int flightAge;
+    /** The world the flight started in: a Homeward Bloom's flight ends when you're moved to the station. */
+    private static @Nullable Level flightLevel;
 
     private BloomClient() {
     }
@@ -52,6 +55,7 @@ public final class BloomClient {
         if (payload.launch()) {
             flight = payload.path();
             flightAge = 0;
+            flightLevel = Minecraft.getInstance().level;
         }
     }
 
@@ -60,7 +64,7 @@ public final class BloomClient {
         GravityFrame frame = GravityFrames.of(player);
         Vec3 up = frame != null ? frame.up() : new Vec3(0, 1, 0);
         BlockPos below = BlockPos.containing(player.position().subtract(up.scale(0.2)));
-        return player.level().getBlockState(below).is(PlanetBlocks.BLOOM_PAD.get()) ? below : null;
+        return PlanetBlocks.isLaunchPad(player.level().getBlockState(below)) ? below : null;
     }
 
     @SubscribeEvent
@@ -86,7 +90,8 @@ public final class BloomClient {
         }
         BlockPos pad = padUnder(player);
         if (pad != null && !pad.equals(lastPad)) {
-            player.sendOverlayMessage(Component.translatable("galaxy_worldgen.bloom.hint"));
+            boolean home = player.level().getBlockState(pad).is(PlanetBlocks.HOMEWARD_PAD.get());
+            player.sendOverlayMessage(Component.translatable(home ? "galaxy_worldgen.bloom.home_hint" : "galaxy_worldgen.bloom.hint"));
         }
         lastPad = pad;
         if (pad == null || !player.isCrouching()) {
@@ -124,6 +129,11 @@ public final class BloomClient {
         GravityFrame frame = player.getData(GravityFrames.FRAME);
         frame.setLaunched(true);
         player.resetFallDistance();
+        if (player.level() != flightLevel) {
+            // Moved to another world mid-flight (a Homeward Bloom reached the station): stop here.
+            flight = null;
+            return;
+        }
         if (player.getAbilities().flying || player.isPassenger() || flightAge > path.ticks()) {
             // Landed (a hair above the leaf so the hitbox doesn't touch it), or flight interrupted.
             if (flightAge > path.ticks()) {
