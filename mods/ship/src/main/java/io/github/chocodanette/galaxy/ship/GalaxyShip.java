@@ -15,8 +15,8 @@ import net.neoforged.fml.common.Mod;
  * The station is a small, primitive platform floating in its own dimension
  * ({@link StationLocation#STATION}). Nobody can build or break there ({@link StationRules}).
  * The galaxy shows below it as a little model ({@link GalaxyView}); jumping off the station
- * into the void drops you into the real galaxy ({@link StationCrew}), and {@code /station}
- * brings you back.
+ * into the void drops you into the real galaxy ({@link StationCrew}). Homeward Blooms in the
+ * galaxy, or dying, bring you back.
  */
 @Mod(GalaxyShip.MODID)
 public final class GalaxyShip {

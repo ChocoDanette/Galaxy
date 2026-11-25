@@ -30,7 +30,8 @@ import io.github.chocodanette.galaxy.gravity.GravityField;
  * /galaxy info          what galaxy and planet you're near
  * /galaxy find &lt;kind&gt;   jump to the nearest hollow planet, gateway planets, planet with
  *                       caves or planet with trees in the galaxy you're in, or onto
- *                       the nearest linked Launch Bloom leaf ("bloom")
+ *                       the nearest linked Launch Bloom leaf ("bloom") or Homeward
+ *                       Bloom leaf ("homeward")
  * </pre>
  */
 public final class GalaxyCommands {
@@ -55,7 +56,8 @@ public final class GalaxyCommands {
                         .then(Commands.literal("gateway").executes(ctx -> find(ctx, "gateway")))
                         .then(Commands.literal("caves").executes(ctx -> find(ctx, "caves")))
                         .then(Commands.literal("trees").executes(ctx -> find(ctx, "trees")))
-                        .then(Commands.literal("bloom").executes(GalaxyCommands::findBloom))));
+                        .then(Commands.literal("bloom").executes(ctx -> findBloom(ctx, false)))
+                        .then(Commands.literal("homeward").executes(ctx -> findBloom(ctx, true)))));
     }
 
     /** How many cells around the player /galaxy find looks through (about 1400 blocks). */
@@ -114,8 +116,8 @@ public final class GalaxyCommands {
         return 1;
     }
 
-    /** Puts you on the nearest linked Launch Bloom leaf, ready to crouch and jump. */
-    private static int findBloom(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    /** Puts you on the nearest linked Launch Bloom leaf (or Homeward Bloom leaf), ready to crouch and jump. */
+    private static int findBloom(CommandContext<CommandSourceStack> ctx, boolean home) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         ServerLevel level = ctx.getSource().getLevel();
         if (!level.dimension().equals(PlanetGravityLink.GALAXY) || Galaxy.numberAt(player.getX()) == 0) {
@@ -127,17 +129,20 @@ public final class GalaxyCommands {
         int cellZ = GalaxyLayout.cellOf(player.getZ());
         Blooms.Leaf found = null;
         double best = Double.MAX_VALUE;
-        int cells = 8;
+        int cells = home ? FIND_CELLS : 8;
         for (int dx = -cells; dx <= cells; dx++) {
             for (int dz = -cells; dz <= cells; dz++) {
                 for (Planet planet : GalaxyLayout.planetsInCell(seed, cellX + dx, cellZ + dz)) {
+                    if (home && !Blooms.isHomeward(seed, planet)) {
+                        continue;
+                    }
                     var bloom = Blooms.bloom(seed, planet);
                     if (bloom.isEmpty()) {
                         continue;
                     }
                     for (Blooms.Leaf leaf : bloom.get().leaves()) {
                         double distance = leaf.standSpot().distanceToSqr(player.position());
-                        if (leaf.linked() && distance < best && distance > 4.0) {
+                        if ((home ? leaf.home() : leaf.linked()) && distance < best && distance > 4.0) {
                             best = distance;
                             found = leaf;
                         }
@@ -146,13 +151,20 @@ public final class GalaxyCommands {
             }
         }
         if (found == null) {
-            ctx.getSource().sendFailure(Component.literal("No Launch Bloom near here. Try another galaxy."));
+            ctx.getSource().sendFailure(Component.literal((home ? "No Homeward Bloom" : "No Launch Bloom")
+                    + " near here. Try another galaxy."));
             return 0;
         }
         Vec3 spot = found.standSpot().add(found.up().getUnitVec3().scale(0.05));
         PlanetGravityLink.addPlanetsAround(level, spot, true);
         player.teleportTo(level, spot.x, spot.y, spot.z, Set.of(), player.getYRot(), 0.0F, true);
         Blooms.Leaf leaf = found;
+        if (home) {
+            ctx.getSource().sendSuccess(() -> Component.literal(String.format(
+                    "On a Homeward Bloom leaf at %d %d %d. Crouch to see the way home, then jump.",
+                    leaf.pad().getX(), leaf.pad().getY(), leaf.pad().getZ())), false);
+            return 1;
+        }
         ctx.getSource().sendSuccess(() -> Component.literal(String.format(
                 "On a Launch Bloom leaf at %d %d %d, linked to a %s planet. Crouch to see the arc, then jump.",
                 leaf.pad().getX(), leaf.pad().getY(), leaf.pad().getZ(), leaf.partner().theme().displayName())), false);

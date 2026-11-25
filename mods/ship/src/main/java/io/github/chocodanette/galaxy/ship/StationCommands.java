@@ -15,7 +15,7 @@ import io.github.chocodanette.galaxy.worldgen.Galaxy;
 
 /**
  * <pre>
- * /station                  go back to the station (anyone, for now)
+ * /station                  go back to the station                    (operators, for testing)
  * /station info             which galaxy is below the station        (operators)
  * /station galaxy &lt;number&gt;  put another galaxy below the station       (operators)
  * /station rebuild          put the station and the galaxy model back (operators)
@@ -30,7 +30,9 @@ public final class StationCommands {
     }
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {
+        // Operators only: players get home through Homeward Blooms, dying, or the galaxy ending.
         event.getDispatcher().register(Commands.literal("station")
+                .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .executes(StationCommands::back)
                 .then(Commands.literal("info")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))

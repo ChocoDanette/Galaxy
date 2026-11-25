@@ -1,5 +1,5 @@
 {
-  "galaxy_worldgen.bed.no_sleep_in_space": "There's no night to sleep through in space",
+  "galaxy_worldgen.bed.no_sleep_in_space": "Beds don't work out here. If you fall, you'll wake up on the station",
   "biome.galaxy_worldgen.space": "Space",
   "block.galaxy_worldgen.planet_turf": "Planet Turf",
   "block.galaxy_worldgen.fungal_turf": "Fungal Turf",
@@ -11,5 +11,10 @@
   "block.galaxy_worldgen.bloom_petal": "Launch Bloom Petal",
   "block.galaxy_worldgen.bloom_core": "Launch Bloom Heart",
   "galaxy_worldgen.bloom.hint": "Crouch to see where this leaf throws you, then jump",
-  "galaxy_worldgen.bloom.no_partner": "This leaf's partner is gone"
+  "galaxy_worldgen.bloom.no_partner": "This leaf's partner is gone",
+  "block.galaxy_worldgen.homeward_pad": "Homeward Bloom Pad",
+  "block.galaxy_worldgen.homeward_petal": "Homeward Bloom Petal",
+  "block.galaxy_worldgen.homeward_core": "Homeward Bloom Heart",
+  "galaxy_worldgen.bloom.home_hint": "A Homeward Bloom! Crouch to see the way home, then jump",
+  "galaxy_worldgen.bloom.no_station": "This bloom has nowhere to send you (Galaxy Station isn't installed)"
 }

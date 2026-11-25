@@ -3,6 +3,7 @@ package io.github.chocodanette.galaxy.worldgen;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.core.BlockPos;
@@ -34,10 +35,24 @@ public final class BloomRides {
     /** How close to a pad a player must be for a request to count. */
     private static final double PAD_REACH = 4.0;
 
-    private record Ride(BloomPath path, long startTick) {
+    /** How high a Homeward Bloom throws you before you're carried off to the station. */
+    static final double HOME_RISE = 40.0;
+
+    private record Ride(BloomPath path, long startTick, boolean home) {
     }
 
     private static final Map<UUID, Ride> RIDES = new ConcurrentHashMap<>();
+
+    /**
+     * What happens at the top of a Homeward Bloom's throw. The Galaxy Station mod sets this to
+     * "bring them to the station"; without it, the throw just ends in space.
+     */
+    private static volatile Consumer<ServerPlayer> homeward;
+
+    /** Called by the Galaxy Station mod: where a Homeward Bloom sends you. */
+    public static void setHomeward(Consumer<ServerPlayer> action) {
+        homeward = action;
+    }
 
     private BloomRides() {
     }
@@ -62,8 +77,16 @@ public final class BloomRides {
 
     /** The arc from a pad to its partner, or empty when the pad isn't a working linked leaf. */
     static Optional<BloomPath> pathFrom(long worldSeed, BlockPos pad) {
-        return Blooms.leafAt(worldSeed, pad).flatMap(leaf -> Blooms.target(worldSeed, leaf).map(target ->
-                BloomPath.between(leaf.standSpot(), leaf.up().getUnitVec3(), target.standSpot(), target.up().getUnitVec3())));
+        return Blooms.leafAt(worldSeed, pad).flatMap(leaf -> leaf.home() ? Optional.of(homePath(leaf))
+                : Blooms.target(worldSeed, leaf).map(target -> BloomPath.between(
+                        leaf.standSpot(), leaf.up().getUnitVec3(), target.standSpot(), target.up().getUnitVec3())));
+    }
+
+    /** A Homeward Bloom's throw: straight up off the leaf, high above the planet. */
+    static BloomPath homePath(Blooms.Leaf leaf) {
+        Vec3 up = leaf.up().getUnitVec3();
+        Vec3 start = leaf.standSpot();
+        return BloomPath.between(start, up, start.add(up.scale(HOME_RISE)), up.reverse());
     }
 
     private static void onRequest(ServerPlayer player, BloomRequestPayload request) {
@@ -71,7 +94,7 @@ public final class BloomRides {
             return;
         }
         BlockPos pad = request.pad();
-        if (!level.getBlockState(pad).is(PlanetBlocks.BLOOM_PAD.get())
+        if (!PlanetBlocks.isLaunchPad(level.getBlockState(pad))
                 || player.position().distanceTo(Vec3.atCenterOf(pad)) > PAD_REACH) {
             return;
         }
@@ -80,14 +103,24 @@ public final class BloomRides {
             player.sendOverlayMessage(Component.translatable("galaxy_worldgen.bloom.no_partner"));
             return;
         }
+        boolean home = level.getBlockState(pad).is(PlanetBlocks.HOMEWARD_PAD.get());
         if (request.launch()) {
-            // Gravity at the far end, so it's there when the player lands.
-            PlanetGravityLink.addPlanetsAround(level, path.get().end(), true);
-            RIDES.put(player.getUUID(), new Ride(path.get(), level.getGameTime()));
+            if (home && homeward == null) {
+                player.sendOverlayMessage(Component.translatable("galaxy_worldgen.bloom.no_station"));
+                return;
+            }
+            if (!home) {
+                // Gravity at the far end, so it's there when the player lands.
+                PlanetGravityLink.addPlanetsAround(level, path.get().end(), true);
+            }
+            RIDES.put(player.getUUID(), new Ride(path.get(), level.getGameTime(), home));
             player.getData(GravityFrames.FRAME).setLaunched(true);
             Vec3 at = path.get().start();
             level.playSound(null, at.x, at.y, at.z, SoundEvents.BIG_DRIPLEAF_TILT_DOWN, SoundSource.PLAYERS, 1.0F, 0.6F);
             level.playSound(null, at.x, at.y, at.z, SoundEvents.BREEZE_JUMP, SoundSource.PLAYERS, 1.0F, 0.8F);
+            if (home) {
+                level.playSound(null, at.x, at.y, at.z, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 1.2F);
+            }
         }
         PacketDistributor.sendToPlayer(player, new BloomPathPayload(pad, path.get(), request.launch()));
     }
@@ -103,7 +136,16 @@ public final class BloomRides {
         }
         player.resetFallDistance();
         long age = player.level().getGameTime() - ride.startTick();
-        if (age > ride.path().ticks() + 40 || !player.level().dimension().equals(PlanetGravityLink.GALAXY)) {
+        if (!player.level().dimension().equals(PlanetGravityLink.GALAXY)) {
+            RIDES.remove(player.getUUID());
+        } else if (ride.home() && age >= ride.path().ticks()) {
+            // The top of a Homeward Bloom's throw: off to the station.
+            RIDES.remove(player.getUUID());
+            Consumer<ServerPlayer> action = homeward;
+            if (action != null) {
+                action.accept(player);
+            }
+        } else if (age > ride.path().ticks() + 40) {
             RIDES.remove(player.getUUID());
         }
     }
