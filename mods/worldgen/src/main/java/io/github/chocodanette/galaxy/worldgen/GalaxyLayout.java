@@ -168,6 +168,9 @@ public final class GalaxyLayout {
             int cellZ, boolean varied) {
         boolean cube = varied && random.nextDouble() < galaxy.cubeChance();
         PlanetTheme theme = pickTheme(galaxy, random);
+        if (varied && isVoidCell(galaxy, cellX, cellY, cellZ)) {
+            theme = PlanetTheme.VOID;
+        }
         double size = biasedSize(random, galaxy.sizeBias());
         double radius;
         double bumpiness;
@@ -186,6 +189,26 @@ public final class GalaxyLayout {
         Vec3 center = placeInCell(random, cellX, cellY, cellZ, extent, extent, extent);
         return new Planet(seed, center, radius,
                 cube ? GravityField.Shape.CUBE : GravityField.Shape.ROUNDED_CUBE, theme, bumpiness, strength, caves);
+    }
+
+    /** Share of the galaxy's radius, from its middle, inside which no Void planet appears. */
+    static final double VOID_MIN_DISTANCE = 0.5;
+    /** Share of the far cells whose planet is a Void planet. */
+    static final double VOID_CHANCE = 0.06;
+
+    /**
+     * Whether a cell's single planet is a Void planet: only in the outer half of a galaxy,
+     * so you have to travel to reach one. Decided by its own hash, so the rest of the
+     * planet (size, place, caves) stays the same as before Void planets existed.
+     */
+    static boolean isVoidCell(Galaxy galaxy, int cellX, int cellY, int cellZ) {
+        double across = Math.hypot((cellX + 0.5) * CELL_SIZE - galaxy.centerX(), (cellZ + 0.5) * CELL_SIZE)
+                / galaxy.radius();
+        double up = ((cellY + 0.5) * CELL_SIZE - Galaxy.CENTER_Y) / galaxy.thickness();
+        if (Math.sqrt(across * across + up * up) < VOID_MIN_DISTANCE) {
+            return false;
+        }
+        return Hashing.unit(galaxy.seed() ^ 0x7E3D1C0FFEEL, cellX, cellY, cellZ) < VOID_CHANCE;
     }
 
     /** A big round shell to explore inside, with a tunnel through its top and bottom. */

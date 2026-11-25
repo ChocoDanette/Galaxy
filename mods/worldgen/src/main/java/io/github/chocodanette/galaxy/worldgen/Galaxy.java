@@ -41,7 +41,7 @@ public record Galaxy(int number, int slot, long seed, int centerX, int radius, i
         SplittableRandom random = new SplittableRandom(seed);
         int radius = 640 + random.nextInt(641);
         double density = 0.55 + random.nextDouble() * 0.35;
-        PlanetTheme[] themes = PlanetTheme.values();
+        PlanetTheme[] themes = PlanetTheme.COMMON.toArray(new PlanetTheme[0]);
         int favoriteCount = 2 + random.nextInt(3);
         PlanetTheme[] favorites = new PlanetTheme[favoriteCount];
         for (int i = 0; i < favoriteCount; i++) {
@@ -87,6 +87,9 @@ public record Galaxy(int number, int slot, long seed, int centerX, int radius, i
 
     /** How common a kind of planet is in this galaxy, compared to the others. */
     int themeWeight(PlanetTheme theme) {
+        if (theme.isRare()) {
+            return 0;
+        }
         return favorites.contains(theme) ? 6 : 1;
     }
 

@@ -14,7 +14,10 @@ public enum Material {
     COAL(Ore.COAL, false), IRON(Ore.IRON, false), COPPER(Ore.COPPER, false), GOLD(Ore.GOLD, false),
     REDSTONE(Ore.REDSTONE, false), LAPIS(Ore.LAPIS, false), DIAMOND(Ore.DIAMOND, false),
     DEEP_COAL(Ore.COAL, true), DEEP_IRON(Ore.IRON, true), DEEP_COPPER(Ore.COPPER, true), DEEP_GOLD(Ore.GOLD, true),
-    DEEP_REDSTONE(Ore.REDSTONE, true), DEEP_LAPIS(Ore.LAPIS, true), DEEP_DIAMOND(Ore.DIAMOND, true);
+    DEEP_REDSTONE(Ore.REDSTONE, true), DEEP_LAPIS(Ore.LAPIS, true), DEEP_DIAMOND(Ore.DIAMOND, true),
+    // What the Nether used to give: these have one look at every depth.
+    QUARTZ(Ore.QUARTZ, false), NETHER_GOLD(Ore.NETHER_GOLD, false), GLOWSTONE(Ore.GLOWSTONE, false),
+    DEBRIS(Ore.DEBRIS, false);
 
     private final Ore ore;
     private final boolean deepOre;
@@ -46,12 +49,21 @@ public enum Material {
             case REDSTONE -> deep ? DEEP_REDSTONE : REDSTONE;
             case LAPIS -> deep ? DEEP_LAPIS : LAPIS;
             case DIAMOND -> deep ? DEEP_DIAMOND : DIAMOND;
+            case QUARTZ -> QUARTZ;
+            case NETHER_GOLD -> NETHER_GOLD;
+            case GLOWSTONE -> GLOWSTONE;
+            case DEBRIS -> DEBRIS;
         };
     }
 
-    /** Ores a planet can hold. Some only appear deep inside, so you have to dig for them. */
+    /**
+     * Ores a planet can hold. Some only appear deep inside, so you have to dig for them.
+     * The last four replace the Nether: only Ember planets have them (ancient debris only in
+     * their very core). New ores go at the end, so older planets keep the same ores.
+     */
     public enum Ore {
-        COAL(0.0), IRON(0.0), COPPER(0.0), GOLD(0.35), REDSTONE(0.35), LAPIS(0.35), DIAMOND(0.65);
+        COAL(0.0), IRON(0.0), COPPER(0.0), GOLD(0.35), REDSTONE(0.35), LAPIS(0.35), DIAMOND(0.65),
+        QUARTZ(0.0), NETHER_GOLD(0.0), GLOWSTONE(0.2), DEBRIS(0.6);
 
         /** How deep (0 = surface, 1 = center) a block must be before this ore can appear. */
         final double minDepth;
@@ -69,6 +81,10 @@ public enum Material {
                 case REDSTONE -> deep ? Blocks.DEEPSLATE_REDSTONE_ORE : Blocks.REDSTONE_ORE;
                 case LAPIS -> deep ? Blocks.DEEPSLATE_LAPIS_ORE : Blocks.LAPIS_ORE;
                 case DIAMOND -> deep ? Blocks.DEEPSLATE_DIAMOND_ORE : Blocks.DIAMOND_ORE;
+                case QUARTZ -> Blocks.NETHER_QUARTZ_ORE;
+                case NETHER_GOLD -> Blocks.NETHER_GOLD_ORE;
+                case GLOWSTONE -> Blocks.GLOWSTONE;
+                case DEBRIS -> Blocks.ANCIENT_DEBRIS;
             };
         }
     }

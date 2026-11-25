@@ -12,6 +12,7 @@
   "block.galaxy_worldgen.bloom_core": "Launch Bloom Heart",
   "galaxy_worldgen.bloom.hint": "Crouch to see where this leaf throws you, then jump",
   "galaxy_worldgen.bloom.no_partner": "This leaf's partner is gone",
+  "galaxy_worldgen.portal.closed": "This portal leads nowhere out here. Look for Ember and Void planets instead",
   "block.galaxy_worldgen.homeward_pad": "Homeward Bloom Pad",
   "block.galaxy_worldgen.homeward_petal": "Homeward Bloom Petal",
   "block.galaxy_worldgen.homeward_core": "Homeward Bloom Heart",
