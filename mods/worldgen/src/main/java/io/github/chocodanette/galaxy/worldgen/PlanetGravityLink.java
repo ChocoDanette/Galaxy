@@ -31,7 +31,7 @@ public final class PlanetGravityLink {
     public static final ResourceKey<Level> GALAXY = ResourceKey.create(Registries.DIMENSION,
             Identifier.fromNamespaceAndPath(GalaxyWorldgen.MODID, "galaxy"));
 
-    /** How many cells around a player get their gravity ready (2 cells = about 190 blocks). */
+    /** How many cells around a player get their gravity ready, along each axis (2 cells = about 190 blocks). */
     private static final int CELLS_AROUND_PLAYER = 2;
     private static final int TICKS_BETWEEN_CHECKS = 20;
     /**
@@ -87,7 +87,7 @@ public final class PlanetGravityLink {
         long seed = level.getSeed();
         int galaxy = Galaxy.numberAt(pos.x);
         if (galaxy > 0) {
-            Planet home = GalaxyLayout.arrivalPlanet(seed, galaxy);
+            Planet home = GalaxyLayout.arrivalPlanet(seed);
             if (known.add(home.center())) {
                 data.add(home.gravityField());
                 added = true;
@@ -95,16 +95,10 @@ public final class PlanetGravityLink {
             added |= data.addAnchor(home.center());
         }
 
-        int cellX = GalaxyLayout.cellOf(pos.x);
-        int cellZ = GalaxyLayout.cellOf(pos.z);
-        for (int dx = -CELLS_AROUND_PLAYER; dx <= CELLS_AROUND_PLAYER; dx++) {
-            for (int dz = -CELLS_AROUND_PLAYER; dz <= CELLS_AROUND_PLAYER; dz++) {
-                for (Planet planet : GalaxyLayout.planetsInCell(seed, cellX + dx, cellZ + dz)) {
-                    if (known.add(planet.center())) {
-                        data.add(planet.gravityField());
-                        added = true;
-                    }
-                }
+        for (Planet planet : GalaxyLayout.planetsNear(seed, pos, CELLS_AROUND_PLAYER)) {
+            if (known.add(planet.center())) {
+                data.add(planet.gravityField());
+                added = true;
             }
         }
         if (added && sync) {

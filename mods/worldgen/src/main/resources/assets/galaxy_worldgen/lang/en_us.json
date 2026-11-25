@@ -11,5 +11,11 @@
   "block.galaxy_worldgen.bloom_petal": "Launch Bloom Petal",
   "block.galaxy_worldgen.bloom_core": "Launch Bloom Heart",
   "galaxy_worldgen.bloom.hint": "Crouch to see where this leaf throws you, then jump",
-  "galaxy_worldgen.bloom.no_partner": "This leaf's partner is gone"
+  "galaxy_worldgen.bloom.no_partner": "This leaf's partner is gone",
+  "galaxy_worldgen.clock.bar": "Galaxy %s collapses in %s",
+  "galaxy_worldgen.clock.warning": "Galaxy %s collapses in %s! Anything left in it will be lost.",
+  "galaxy_worldgen.clock.final": "The galaxy collapses in %s...",
+  "galaxy_worldgen.clock.recalled": "Galaxy %s collapsed. You were pulled back home with what you carried.",
+  "galaxy_worldgen.clock.collapsed_away": "Galaxy %s collapsed while you were away. You were brought back home.",
+  "galaxy_worldgen.clock.collapsed": "Galaxy %s is gone. A new one formed: galaxy %s, where %s planets are common. It lasts %s."
 }
