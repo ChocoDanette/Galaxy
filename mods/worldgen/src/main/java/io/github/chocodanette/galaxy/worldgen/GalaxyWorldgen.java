@@ -38,6 +38,7 @@ public final class GalaxyWorldgen {
         BloomRides.register(modEventBus);
         PlanetGravityLink.register();
         GalaxyCommands.register();
+        VanillaDimensions.register();
         LOGGER.info("Galaxy Generation loaded");
     }
 }
