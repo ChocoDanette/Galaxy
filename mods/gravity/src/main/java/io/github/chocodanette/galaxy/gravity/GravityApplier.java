@@ -31,6 +31,10 @@ public final class GravityApplier {
     private static final double FLOAT_DAMPING = 0.12;
     /** Speed of a jump off a floating planet, in blocks per tick. */
     private static final double FLOAT_JUMP = 0.4;
+    /** Share of the pull felt in water, like vanilla's slow sinking (1/16 of gravity). */
+    static final double WATER_PULL = 1.0 / 16.0;
+    /** Share of the pull felt in lava (vanilla sinks a bit faster there). */
+    static final double LAVA_PULL = 1.0 / 4.0;
 
     private GravityApplier() {
     }
@@ -106,6 +110,12 @@ public final class GravityApplier {
         if (anyFrame != null && anyFrame.isLaunched()) {
             // Flying after a charged jump: half the pull, so you can leave the planet.
             scale *= Launch.PULL_SHARE;
+        }
+        if (entity.isInWater()) {
+            // Swimming: you sink slowly instead of dropping like a stone.
+            scale *= WATER_PULL;
+        } else if (entity.isInLava()) {
+            scale *= LAVA_PULL;
         }
         entity.setDeltaMovement(entity.getDeltaMovement().add(down.scale(gravity.getBaseValue() * scale)));
     }

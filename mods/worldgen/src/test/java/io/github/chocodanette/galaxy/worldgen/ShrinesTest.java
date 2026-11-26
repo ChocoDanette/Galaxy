@@ -104,7 +104,7 @@ class ShrinesTest {
     @Test
     void otherThemesGetNoNetherOres() {
         for (PlanetTheme theme : PlanetTheme.values()) {
-            if (theme == PlanetTheme.EMBER) {
+            if (theme == PlanetTheme.EMBER || theme == PlanetTheme.LAVA) {
                 continue;
             }
             for (Material.Ore ore : List.of(Material.Ore.QUARTZ, Material.Ore.NETHER_GOLD, Material.Ore.GLOWSTONE,

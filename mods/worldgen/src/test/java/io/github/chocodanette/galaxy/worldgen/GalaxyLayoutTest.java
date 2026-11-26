@@ -1,6 +1,7 @@
 package io.github.chocodanette.galaxy.worldgen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -98,6 +99,7 @@ class GalaxyLayoutTest {
             int y = (int) Math.floor(spot.y);
             int z = (int) Math.floor(spot.z);
             assertNotNull(planet.materialAt(x, y - 1, z), "no ground under landing spot");
+            assertFalse(planet.hasSea(), "nobody arrives in a sea");
             assertNull(planet.materialAt(x, y, z));
             assertNull(planet.materialAt(x, y + 1, z));
             GravityField field = planet.gravityField();

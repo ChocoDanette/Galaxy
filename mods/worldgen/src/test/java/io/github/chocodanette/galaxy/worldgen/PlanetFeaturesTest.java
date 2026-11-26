@@ -1,6 +1,7 @@
 package io.github.chocodanette.galaxy.worldgen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -231,5 +232,76 @@ class PlanetFeaturesTest {
                 add(block.up());
             }
         }
+    }
+
+    // ---------------------------------------------------------------- seas
+
+    private static Planet seaPlanet(PlanetTheme theme) {
+        return new Planet(SEED, CENTER, 16, GravityField.Shape.ROUNDED_CUBE, theme, 0.22, 1.0, true);
+    }
+
+    @Test
+    void waterPlanetHasSeaIslandsAndSeabed() {
+        Planet planet = seaPlanet(PlanetTheme.OCEAN);
+        assertTrue(planet.hasSea());
+        int sea = 0;
+        int seabed = 0;
+        int dryGround = 0;
+        int r = (int) Math.ceil(planet.extent()) + 1;
+        for (int x = -r; x <= r; x++) {
+            for (int y = -r; y <= r; y++) {
+                for (int z = -r; z <= r; z++) {
+                    Material m = planet.materialAt(x, 100 + y, z);
+                    boolean liquid = planet.liquidAt(x, 100 + y, z);
+                    if (liquid) {
+                        sea++;
+                        assertNull(m, "sea inside the ground at " + x + " " + y + " " + z);
+                    }
+                    if (m == Material.SEABED || m == Material.SEABED_PATCH) {
+                        seabed++;
+                    }
+                    if (m == Material.TOP || m == Material.SIDE) {
+                        dryGround++;
+                    }
+                }
+            }
+        }
+        assertTrue(sea > 500, "sea blocks: " + sea);
+        assertTrue(seabed > 200, "seabed blocks: " + seabed);
+        assertTrue(dryGround > 50, "island ground blocks: " + dryGround);
+    }
+
+    @Test
+    void caveTunnelsNeverFillWithTheSea() {
+        Planet planet = seaPlanet(PlanetTheme.LAVA);
+        int r = (int) Math.ceil(planet.extent());
+        for (int x = -r; x <= r; x++) {
+            for (int y = -r; y <= r; y++) {
+                for (int z = -r; z <= r; z++) {
+                    if (planet.liquidAt(x, 100 + y, z)) {
+                        // Open sea is outside the uncarved ground too.
+                        assertTrue(planet.seaGap(x + 0.5 - CENTER.x, y + 100.5 - CENTER.y, z + 0.5 - CENTER.z) > 0);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void onlyOutsideSurfacesHoldSeas() {
+        assertFalse(new Planet(SEED, CENTER, 16, GravityField.Shape.HOLLOW, PlanetTheme.OCEAN, 0.0, 1.0).hasSea());
+        assertFalse(new Planet(SEED, CENTER, 3, GravityField.Shape.ROUNDED_CUBE, PlanetTheme.OCEAN, 0.0, 1.0).hasSea());
+        assertFalse(seaPlanet(PlanetTheme.VERDANT).hasSea());
+    }
+
+    @Test
+    void lavaPlanetLandingIsOnAnIsland() {
+        Planet planet = seaPlanet(PlanetTheme.LAVA);
+        Vec3 spot = planet.landingSpot();
+        int x = (int) Math.floor(spot.x);
+        int y = (int) Math.floor(spot.y);
+        int z = (int) Math.floor(spot.z);
+        assertFalse(planet.liquidAt(x, y, z), "landed in lava");
+        assertNotNull(planet.materialAt(x, y - 1, z));
     }
 }

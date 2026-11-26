@@ -11,6 +11,8 @@ public enum Material {
     TOP, SIDE, SOIL, STONE, DEEP, CORE,
     /** A light block, like the little sun in the middle of a hollow planet. */
     GLOW,
+    /** The ground under a water or lava sea, and its scattered patches of something else. */
+    SEABED, SEABED_PATCH,
     COAL(Ore.COAL, false), IRON(Ore.IRON, false), COPPER(Ore.COPPER, false), GOLD(Ore.GOLD, false),
     REDSTONE(Ore.REDSTONE, false), LAPIS(Ore.LAPIS, false), DIAMOND(Ore.DIAMOND, false),
     DEEP_COAL(Ore.COAL, true), DEEP_IRON(Ore.IRON, true), DEEP_COPPER(Ore.COPPER, true), DEEP_GOLD(Ore.GOLD, true),
@@ -58,7 +60,7 @@ public enum Material {
 
     /**
      * Ores a planet can hold. Some only appear deep inside, so you have to dig for them.
-     * The last four replace the Nether: only Ember planets have them (ancient debris only in
+     * The last four replace the Nether: only Ember and lava planets have them (ancient debris only in
      * their very core). New ores go at the end, so older planets keep the same ores.
      */
     public enum Ore {

@@ -47,7 +47,23 @@ public enum PlanetTheme {
      */
     VOID("void", () -> Blocks.END_STONE, () -> Blocks.END_STONE, () -> Blocks.END_STONE,
             () -> Blocks.END_STONE, () -> Blocks.END_STONE_BRICKS, () -> Blocks.OBSIDIAN,
-            0.010, new int[] {0, 0, 0, 0, 0, 2, 3});
+            0.010, new int[] {0, 0, 0, 0, 0, 2, 3}),
+    /**
+     * Water planets: a shallow ocean over every face, grassy islands where the hills rise out
+     * of it, and a sandy seabed with clay. A prismarine heart deep inside.
+     */
+    OCEAN("ocean", () -> Blocks.GRASS_BLOCK, () -> PlanetBlocks.PLANET_TURF.get(), () -> Blocks.DIRT,
+            () -> Blocks.STONE, () -> Blocks.DEEPSLATE, () -> Blocks.PRISMARINE,
+            0.018, new int[] {5, 4, 6, 2, 2, 5, 1},
+            () -> Blocks.WATER, () -> Blocks.SAND, () -> Blocks.CLAY),
+    /**
+     * Lava planets: a sea of lava with basalt islands, magma and obsidian under it, and the
+     * Nether's ores in the rock, more of them than on Ember planets.
+     */
+    LAVA("lava", () -> Blocks.SMOOTH_BASALT, () -> Blocks.SMOOTH_BASALT, () -> Blocks.BASALT,
+            () -> Blocks.NETHERRACK, () -> Blocks.BLACKSTONE, () -> Blocks.MAGMA_BLOCK,
+            0.030, new int[] {2, 3, 1, 4, 2, 0, 2, 6, 6, 3, 3},
+            () -> Blocks.LAVA, () -> Blocks.MAGMA_BLOCK, () -> Blocks.OBSIDIAN);
 
     private final String name;
     private final Supplier<Block> top;
@@ -58,10 +74,23 @@ public enum PlanetTheme {
     private final Supplier<Block> core;
     private final double oreChance;
     private final int[] oreWeights;
+    private final Supplier<Block> liquid;
+    private final Supplier<Block> seabed;
+    private final Supplier<Block> seabedPatch;
 
     PlanetTheme(String name, Supplier<Block> top, Supplier<Block> side, Supplier<Block> soil,
             Supplier<Block> stone, Supplier<Block> deep, Supplier<Block> core,
             double oreChance, int[] oreWeights) {
+        this(name, top, side, soil, stone, deep, core, oreChance, oreWeights, null, null, null);
+    }
+
+    PlanetTheme(String name, Supplier<Block> top, Supplier<Block> side, Supplier<Block> soil,
+            Supplier<Block> stone, Supplier<Block> deep, Supplier<Block> core,
+            double oreChance, int[] oreWeights,
+            Supplier<Block> liquid, Supplier<Block> seabed, Supplier<Block> seabedPatch) {
+        this.liquid = liquid;
+        this.seabed = seabed;
+        this.seabedPatch = seabedPatch;
         this.name = name;
         this.top = top;
         this.side = side;
@@ -83,7 +112,17 @@ public enum PlanetTheme {
 
     /** Whether planet grass and starblooms grow on this kind of planet. */
     boolean hasPlants() {
-        return this == VERDANT || this == MOSSY;
+        return this == VERDANT || this == MOSSY || this == OCEAN;
+    }
+
+    /** Whether this kind of planet is covered by a sea (water or lava). */
+    public boolean hasSea() {
+        return liquid != null;
+    }
+
+    /** The sea's liquid block (water or lava); only for themes with a sea. */
+    public Block liquid() {
+        return liquid.get();
     }
 
     /** Whether the top block falls (sand, gravel), so caves and inner ground must avoid it. */
@@ -99,6 +138,7 @@ public enum PlanetTheme {
             case FROST -> List.of(Trees.Style.SPRUCE);
             case FUNGAL -> List.of(Trees.Style.RED_MUSHROOM, Trees.Style.BROWN_MUSHROOM);
             case EMBER -> List.of(Trees.Style.CRIMSON);
+            case OCEAN -> List.of(Trees.Style.OAK, Trees.Style.BIRCH);
             default -> List.of();
         };
     }
@@ -111,6 +151,7 @@ public enum PlanetTheme {
             case FROST -> 0.008;
             case FUNGAL -> 0.006;
             case EMBER -> 0.005;
+            case OCEAN -> 0.010;
             default -> 0.0;
         };
     }
@@ -140,6 +181,8 @@ public enum PlanetTheme {
             case DEEP -> deep.get();
             case CORE -> core.get();
             case GLOW -> Blocks.SHROOMLIGHT;
+            case SEABED -> seabed != null ? seabed.get() : top.get();
+            case SEABED_PATCH -> seabedPatch != null ? seabedPatch.get() : top.get();
             default -> material.ore().block(material.isDeepOre());
         };
     }
