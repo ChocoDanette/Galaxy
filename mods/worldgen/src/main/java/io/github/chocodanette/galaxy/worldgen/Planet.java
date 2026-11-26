@@ -176,6 +176,9 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             return null;
         }
         if (depth < 1.0) {
+            if (hasSea() && seaGap(dx, dy, dz) > SEABED_COVER) {
+                return seabedAt(x, y, z);
+            }
             return onTop ? Material.TOP : Material.SIDE;
         }
         if (depth < soilDepth) {
@@ -220,8 +223,9 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         if (inner > 0.8) {
             return false;
         }
-        // Sand and gravel would pour into a tunnel right under them, so keep a roof there.
-        if (theme.topFalls() && depth < SOIL_DEPTH + 1.0) {
+        // Sand and gravel would pour into a tunnel right under them, and a sea would drain into
+        // it, so keep a roof there.
+        if ((theme.topFalls() || theme.hasSea()) && depth < SOIL_DEPTH + 1.0) {
             return false;
         }
         double f = 1.0 / CAVE_SCALE;
@@ -266,6 +270,60 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         return null;
     }
 
+    // ---------------------------------------------------------------- seas
+
+    /**
+     * Where the sea's surface sits, as a share of the hills' height above the plain ground:
+     * hills taller than this rise out of the sea as islands.
+     */
+    static final double SEA_LEVEL = 0.15;
+    /** A ground block with at least this much sea above its middle is seabed, not grass. */
+    private static final double SEABED_COVER = 0.5;
+    /** Share of the seabed that is the theme's other seabed block (clay, obsidian). */
+    private static final double SEABED_PATCH_CHANCE = 0.12;
+
+    /**
+     * Whether this planet has a sea: water and lava planets, apart from hollow ones (no
+     * outside to hold it), sharp cubes (no hills, so no islands) and floating gateway planets.
+     */
+    public boolean hasSea() {
+        return theme.hasSea() && !isGateway()
+                && (shape == GravityField.Shape.SPHERE || shape == GravityField.Shape.ROUNDED_CUBE);
+    }
+
+    /**
+     * How far below the sea's surface a point is, in blocks (negative above it). The surface
+     * has the same shape as the planet without its hills.
+     */
+    double seaGap(double dx, double dy, double dz) {
+        if (shape == GravityField.Shape.ROUNDED_CUBE) {
+            double bevel = GravityField.roundedBevel(radius);
+            double core = radius - bevel;
+            double ex = dx - clamp(dx, core);
+            double ey = dy - clamp(dy, core);
+            double ez = dz - clamp(dz, core);
+            return bevel + bumpiness * radius * SEA_LEVEL - Math.sqrt(ex * ex + ey * ey + ez * ez);
+        }
+        return radius * (1.0 + bumpiness * SEA_LEVEL) - Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /**
+     * Whether this block is open sea (water or lava). Caves stay dry: only space outside the
+     * ground counts, never a tunnel inside it.
+     */
+    public boolean liquidAt(int x, int y, int z) {
+        if (!hasSea()) {
+            return false;
+        }
+        double gap = seaGap(x + 0.5 - center.x, y + 0.5 - center.y, z + 0.5 - center.z);
+        return gap > 0 && materialAt(x, y, z, false) == null;
+    }
+
+    private Material seabedAt(int x, int y, int z) {
+        double patch = Hashing.smoothNoise(seed ^ 0x2F2D3A6B9C1E4F57L, x / 3.0, y / 3.0, z / 3.0);
+        return patch > 1.0 - 2.0 * SEABED_PATCH_CHANCE ? Material.SEABED_PATCH : Material.SEABED;
+    }
+
     // ---------------------------------------------------------------- plants
 
     /** Share of open surface spots that grow a plant, on planets that have plants. */
@@ -290,7 +348,7 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         if (below != Material.TOP && below != Material.SIDE) {
             return null;
         }
-        if (materialAt(x, y, z) != null) {
+        if (materialAt(x, y, z) != null || liquidAt(x, y, z)) {
             return null;
         }
         double roll = Hashing.unit(seed ^ 0x6A09E667F3BCC909L, x, y, z);
@@ -386,7 +444,8 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             int bx = root[0] + up.getStepX();
             int by = root[1] + up.getStepY();
             int bz = root[2] + up.getStepZ();
-            if (materialAt(bx, by, bz) != null || upAt(bx, by, bz) != up || tooClose(roots, root)) {
+            if (materialAt(bx, by, bz) != null || liquidAt(bx, by, bz) || upAt(bx, by, bz) != up
+                    || tooClose(roots, root)) {
                 continue;
             }
 
@@ -533,6 +592,23 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         int z = (int) Math.floor(center.z);
         if (shape == GravityField.Shape.HOLLOW) {
             x += (int) Math.ceil(GravityField.hollowTunnelRadius(radius) + 2.0);
+        }
+        if (hasSea()) {
+            // On an island, not in the sea (which could be lava). Rings outward from the middle.
+            int reach = (int) Math.floor(radius * 0.8);
+            for (int ring = 0; ring <= reach; ring++) {
+                for (int i = -ring; i <= ring; i++) {
+                    for (int j = -ring; j <= ring; j++) {
+                        if (Math.max(Math.abs(i), Math.abs(j)) != ring) {
+                            continue;
+                        }
+                        int top = topY(x + i, z + j);
+                        if (top != Integer.MIN_VALUE && !liquidAt(x + i, top + 1, z + j)) {
+                            return new Vec3(x + i + 0.5, top + 1, z + j + 0.5);
+                        }
+                    }
+                }
+            }
         }
         return new Vec3(x + 0.5, topY(x, z) + 1, z + 0.5);
     }

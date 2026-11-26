@@ -90,6 +90,10 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
                             chunk.setBlockState(cursor.set(x, y, z), theme.block(material).defaultBlockState());
                             continue;
                         }
+                        if (planet.liquidAt(x, y, z)) {
+                            chunk.setBlockState(cursor.set(x, y, z), theme.liquid().defaultBlockState());
+                            continue;
+                        }
                         Planet.PlantSpot plant = planet.plantAt(x, y, z);
                         if (plant != null) {
                             Block block = plant.bloom() ? PlanetBlocks.STARBLOOM.get() : PlanetBlocks.PLANET_GRASS.get();

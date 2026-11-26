@@ -99,9 +99,27 @@ public final class PlanetGravityData extends SavedData {
         setDirty();
     }
 
-    /** This dimension's planets and space pull, ready for the gravity math. */
+    /** Snapshot handed out by {@link #world()}, rebuilt after any change. */
+    private GravityWorld world;
+
+    /**
+     * This dimension's planets and space pull, ready for the gravity math. The same object
+     * comes back until something changes, so callers (like flowing liquids) can cache by it.
+     */
     public GravityWorld world() {
-        return new GravityWorld(fields, spacePull, anchors, mode);
+        GravityWorld snapshot = world;
+        if (snapshot == null) {
+            snapshot = new GravityWorld(fields, spacePull, anchors, mode);
+            world = snapshot;
+        }
+        return snapshot;
+    }
+
+    @Override
+    public void setDirty() {
+        // Every change goes through here, so it also drops the snapshot.
+        world = null;
+        super.setDirty();
     }
 
     /**

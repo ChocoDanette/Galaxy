@@ -171,6 +171,15 @@ public final class GalaxyLayout {
         if (varied && isVoidCell(galaxy, cellX, cellY, cellZ)) {
             theme = PlanetTheme.VOID;
         }
+        if (theme.hasSea()) {
+            if (!varied) {
+                // Nobody arrives in the middle of a sea.
+                theme = PlanetTheme.VERDANT;
+            } else {
+                // A sea needs hills to make islands, and sharp cubes have none.
+                cube = false;
+            }
+        }
         double size = biasedSize(random, galaxy.sizeBias());
         double radius;
         double bumpiness;
@@ -180,7 +189,11 @@ public final class GalaxyLayout {
         } else {
             radius = MIN_ROUNDED_HALF + size * (MAX_ROUNDED_HALF - MIN_ROUNDED_HALF);
             // Hills, as a share of the half size; small planets stay smoother.
-            bumpiness = (0.02 + random.nextDouble() * 0.08) * Math.min(1.0, radius / 14.0);
+            double roll = random.nextDouble();
+            bumpiness = theme.hasSea()
+                    // Big hills, so some rise out of the sea as islands, even on small planets.
+                    ? 0.16 + roll * 0.10
+                    : (0.02 + roll * 0.08) * Math.min(1.0, radius / 14.0);
         }
         double extent = cube ? radius : radius * (1.0 + bumpiness);
         double strength = 0.7 + random.nextDouble() * 0.3;

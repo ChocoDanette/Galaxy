@@ -35,7 +35,8 @@ import io.github.chocodanette.galaxy.gravity.GravityField;
  *                       caves or planet with trees in the galaxy you're in, or onto
  *                       the nearest linked Launch Bloom leaf ("bloom") or Homeward
  *                       Bloom leaf ("homeward"); "ember" finds an Ember planet with a
- *                       blaze shrine, "void" a Void planet (with its shrine)
+ *                       blaze shrine, "void" a Void planet (with its shrine),
+ *                       "ocean" a water planet and "lava" a lava planet
  * </pre>
  */
 public final class GalaxyCommands {
@@ -64,6 +65,8 @@ public final class GalaxyCommands {
                         .then(Commands.literal("trees").executes(ctx -> find(ctx, "trees")))
                         .then(Commands.literal("ember").executes(ctx -> find(ctx, "ember")))
                         .then(Commands.literal("void").executes(ctx -> find(ctx, "void")))
+                        .then(Commands.literal("ocean").executes(ctx -> find(ctx, "ocean")))
+                        .then(Commands.literal("lava").executes(ctx -> find(ctx, "lava")))
                         .then(Commands.literal("bloom").executes(ctx -> findBloom(ctx, false)))
                         .then(Commands.literal("homeward").executes(ctx -> findBloom(ctx, true)))));
     }
@@ -78,6 +81,8 @@ public final class GalaxyCommands {
             case "caves" -> cell.stream().anyMatch(Planet::caves);
             case "ember" -> cell.stream().anyMatch(p -> Shrines.of(p) == Shrines.Kind.EMBER);
             case "void" -> cell.stream().anyMatch(p -> p.theme() == PlanetTheme.VOID);
+            case "ocean" -> cell.stream().anyMatch(p -> p.theme() == PlanetTheme.OCEAN && p.hasSea());
+            case "lava" -> cell.stream().anyMatch(p -> p.theme() == PlanetTheme.LAVA && p.hasSea());
             default -> cell.stream().anyMatch(p -> !p.trees().isEmpty());
         };
     }
@@ -107,6 +112,7 @@ public final class GalaxyCommands {
                     case "trees" -> cell.stream().filter(p -> !p.trees().isEmpty()).findFirst().orElseThrow();
                     case "ember" -> cell.stream().filter(p -> Shrines.of(p) == Shrines.Kind.EMBER)
                             .findFirst().orElseThrow();
+                    case "ocean", "lava" -> cell.stream().filter(p -> p.hasSea()).findFirst().orElseThrow();
                     default -> cell.get(0);
                 };
                 double distance = planet.center().distanceToSqr(player.position());

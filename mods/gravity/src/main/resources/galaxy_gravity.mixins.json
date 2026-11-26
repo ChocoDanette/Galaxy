@@ -7,6 +7,7 @@
     "DefaultRandomPosMixin",
     "EntityMixin",
     "FallingBlockMixin",
+    "FlowingFluidMixin",
     "GroundPathNavigationMixin",
     "LandRandomPosMixin",
     "LineOfSightMixin",
@@ -21,11 +22,13 @@
     "PlayerMixin",
     "PlayerPickupMixin",
     "ServerGamePacketListenerImplMixin",
+    "SwimMixin",
     "UseOnContextMixin"
   ],
   "client": [
     "client.CameraMixin",
     "client.ClientLevelMixin",
+    "client.FluidRendererMixin",
     "client.FreeParticleMixin",
     "client.ItemEntityRendererMixin",
     "client.LevelExtractorMixin",
