@@ -89,6 +89,6 @@ public abstract class CameraMixin {
                 Mth.lerp(partialTicks, entity.yo, entity.getY()),
                 Mth.lerp(partialTicks, entity.zo, entity.getZ()));
         float eyes = Mth.lerp(partialTicks, eyeHeightOld, eyeHeight);
-        setPosition(feet.add(frame.up(partialTicks).scale(eyes)));
+        setPosition(GravityFrames.safeEyes(entity, feet, frame.up(partialTicks), GravityFrames.boxAxis(frame), eyes));
     }
 }

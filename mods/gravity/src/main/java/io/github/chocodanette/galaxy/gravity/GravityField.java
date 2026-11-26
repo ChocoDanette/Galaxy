@@ -151,6 +151,24 @@ public record GravityField(Vec3 center, double radius, double range, double stre
     }
 
     /**
+     * True inside the open tunnel through a hollow planet's poles, between its two rims. There
+     * gravity points to the nearest tunnel wall, which swaps to the opposite wall as you cross
+     * the tunnel's middle line.
+     */
+    public boolean inHollowTunnel(Vec3 pos) {
+        if (shape != Shape.HOLLOW) {
+            return false;
+        }
+        double rx = pos.x - center.x;
+        double rz = pos.z - center.z;
+        double wall = hollowTunnelRadius(radius);
+        double inner = innerRadius();
+        double rim = Math.sqrt(Math.max(0.0, inner * inner - wall * wall));
+        double height = Math.abs(pos.y - center.y);
+        return rx * rx + rz * rz < wall * wall && height > rim && height < radius + 1.0;
+    }
+
+    /**
      * A hollow planet is a shell with a big open space inside and a tunnel through its top and
      * bottom (along world y). Its gravity pulls toward the closest point of a thinner copy of
      * that shell, the same trick cubes use for their edges. Outside, that points to the

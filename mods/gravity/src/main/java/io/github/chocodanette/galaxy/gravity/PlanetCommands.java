@@ -41,8 +41,7 @@ public final class PlanetCommands {
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("galaxy")
-                .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-                .then(Commands.literal("planet")
+                .then(Commands.literal("planet").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("center", Vec3Argument.vec3())
                                         .then(Commands.argument("radius", DoubleArgumentType.doubleArg(1, 512))

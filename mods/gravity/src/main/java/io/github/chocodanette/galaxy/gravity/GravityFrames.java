@@ -131,9 +131,12 @@ public final class GravityFrames {
         org.joml.Quaternionf before = frame.currentRotation();
         frame.tick(up, facing(entity, frame));
         if (boxAxis(frame) != axisBefore && !hasRoomToTurn(entity, boxAxis(frame))) {
-            // Turning now would push the hitbox into rock: wait until there's room.
+            // Turning now would push the hitbox into rock: wait until there's room. Gravity
+            // waits too, or it would pull the body sideways into the wall it can't turn from.
             frame.undoTurn();
+            frame.setGravityDown(frame.up().scale(-1));
         }
+        frame.noteBoxTurn(boxAxis(frame) != axisBefore);
         if (!before.equals(frame.currentRotation(), 1.0E-6F) && KEEPS_LOOK.test(entity)) {
             keepLook(entity, before, frame.currentRotation());
         }
@@ -146,6 +149,44 @@ public final class GravityFrames {
             // Vanilla measures falls along world "down", which is wrong on a planet's side.
             entity.resetFallDistance();
         }
+        if (!world.fields().isEmpty()) {
+            StuckSafety.tick(entity, frame);
+        }
+    }
+
+    /**
+     * Where the eyes are, given the smooth "up". The view leans smoothly on a curve but the
+     * hitbox stays straight along a block axis, so in a narrow tunnel the leaning eyes can end
+     * up inside the rock beside the body: you'd take suffocation damage and see through
+     * blocks. When that happens, the eyes go back to the middle of the hitbox instead, which
+     * is always clear.
+     */
+    public static Vec3 safeEyes(Entity entity, Vec3 feet, Vec3 up, Direction axis, double eyeHeight) {
+        Vec3 eyes = feet.add(up.scale(eyeHeight));
+        if (!insideBlock(entity.level(), eyes)) {
+            return eyes;
+        }
+        return feet.add(axis.getUnitVec3().scale(eyeHeight));
+    }
+
+    /** True if the point is inside a solid part of a block. */
+    private static boolean insideBlock(Level level, Vec3 point) {
+        BlockPos pos = BlockPos.containing(point);
+        BlockState state = level.getBlockState(pos);
+        if (state.isAir()) {
+            return false;
+        }
+        var shape = state.getCollisionShape(level, pos);
+        if (shape.isEmpty()) {
+            return false;
+        }
+        Vec3 local = point.subtract(pos.getX(), pos.getY(), pos.getZ());
+        for (AABB part : shape.toAabbs()) {
+            if (part.inflate(0.05).contains(local)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -240,6 +281,9 @@ public final class GravityFrames {
         return false;
     }
 
+    /** In a hollow planet's tunnel, a new "up" this far past square to the old one is ignored (cosine). */
+    private static final double HOLLOW_FLIP_GUARD = -0.2;
+
     /** Ticks after leaving the ground during which "up" still follows the ground. */
     private static final int GROUND_GRACE_TICKS = 3;
 
@@ -258,6 +302,13 @@ public final class GravityFrames {
         var pull = GravityMath.pull(world, entity.position(), Double.NaN, frame.holdCenter());
         pull.filter(GravityMath.Pull::inField).ifPresent(p -> frame.setHoldCenter(p.field().center()));
         Vec3 planetUp = pull.map(GravityMath.Pull::down).orElse(GravityMath.VANILLA_DOWN).scale(-1);
+        if (pull.isPresent() && pull.get().inField() && pull.get().field().inHollowTunnel(entity.position())
+                && planetUp.dot(frame.up()) < HOLLOW_FLIP_GUARD) {
+            // In a hollow planet's tunnel, gravity points to the nearest wall, so drifting over
+            // the middle line would flip it right over. Keep the wall you were on instead.
+            frame.setStepUp(null);
+            return frame.up();
+        }
         if (pull.isPresent() && pull.get().floating()) {
             // Floating round a gateway planet: turn smoothly with it, no steps.
             frame.setStepUp(null);

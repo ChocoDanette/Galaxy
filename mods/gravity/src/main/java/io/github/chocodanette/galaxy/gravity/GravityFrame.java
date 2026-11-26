@@ -66,6 +66,30 @@ public final class GravityFrame {
         this.crawling = crawling;
     }
 
+    /** Ticks since the hitbox last swung to another axis (see {@link StuckSafety}). */
+    private int ticksSinceBoxTurn = 1000;
+    /** Ticks in a row the hitbox has overlapped blocks (see {@link StuckSafety}). */
+    private int stuckTicks;
+
+    /** Counts up each tick, back to 0 when the hitbox swung to another axis this tick. */
+    public void noteBoxTurn(boolean turned) {
+        ticksSinceBoxTurn = turned ? 0 : Math.min(ticksSinceBoxTurn + 1, 1000);
+    }
+
+    public int ticksSinceBoxTurn() {
+        return ticksSinceBoxTurn;
+    }
+
+    /** Counts up while stuck in blocks, back to 0 when free. Returns the new count. */
+    public int updateStuck(boolean stuck) {
+        stuckTicks = stuck ? Math.min(stuckTicks + 1, 1000) : 0;
+        return stuckTicks;
+    }
+
+    public int stuckTicks() {
+        return stuckTicks;
+    }
+
     /** Goes back to where the frame was before this tick's turn (no room to turn). */
     public void undoTurn() {
         rotation.set(previous);
