@@ -1,0 +1,212 @@
+{
+  "variants": {
+    "facing=up,moisture=0": {
+      "model": "minecraft:block/farmland"
+    },
+    "facing=up,moisture=1": {
+      "model": "minecraft:block/farmland"
+    },
+    "facing=up,moisture=2": {
+      "model": "minecraft:block/farmland"
+    },
+    "facing=up,moisture=3": {
+      "model": "minecraft:block/farmland"
+    },
+    "facing=up,moisture=4": {
+      "model": "minecraft:block/farmland"
+    },
+    "facing=up,moisture=5": {
+      "model": "minecraft:block/farmland"
+    },
+    "facing=up,moisture=6": {
+      "model": "minecraft:block/farmland"
+    },
+    "facing=up,moisture=7": {
+      "model": "minecraft:block/farmland_moist"
+    },
+    "facing=down,moisture=0": {
+      "model": "minecraft:block/farmland",
+      "x": 180
+    },
+    "facing=down,moisture=1": {
+      "model": "minecraft:block/farmland",
+      "x": 180
+    },
+    "facing=down,moisture=2": {
+      "model": "minecraft:block/farmland",
+      "x": 180
+    },
+    "facing=down,moisture=3": {
+      "model": "minecraft:block/farmland",
+      "x": 180
+    },
+    "facing=down,moisture=4": {
+      "model": "minecraft:block/farmland",
+      "x": 180
+    },
+    "facing=down,moisture=5": {
+      "model": "minecraft:block/farmland",
+      "x": 180
+    },
+    "facing=down,moisture=6": {
+      "model": "minecraft:block/farmland",
+      "x": 180
+    },
+    "facing=down,moisture=7": {
+      "model": "minecraft:block/farmland_moist",
+      "x": 180
+    },
+    "facing=north,moisture=0": {
+      "model": "minecraft:block/farmland",
+      "x": 90
+    },
+    "facing=north,moisture=1": {
+      "model": "minecraft:block/farmland",
+      "x": 90
+    },
+    "facing=north,moisture=2": {
+      "model": "minecraft:block/farmland",
+      "x": 90
+    },
+    "facing=north,moisture=3": {
+      "model": "minecraft:block/farmland",
+      "x": 90
+    },
+    "facing=north,moisture=4": {
+      "model": "minecraft:block/farmland",
+      "x": 90
+    },
+    "facing=north,moisture=5": {
+      "model": "minecraft:block/farmland",
+      "x": 90
+    },
+    "facing=north,moisture=6": {
+      "model": "minecraft:block/farmland",
+      "x": 90
+    },
+    "facing=north,moisture=7": {
+      "model": "minecraft:block/farmland_moist",
+      "x": 90
+    },
+    "facing=south,moisture=0": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,moisture=1": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,moisture=2": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,moisture=3": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,moisture=4": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,moisture=5": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,moisture=6": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 180
+    },
+    "facing=south,moisture=7": {
+      "model": "minecraft:block/farmland_moist",
+      "x": 90,
+      "y": 180
+    },
+    "facing=east,moisture=0": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,moisture=1": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,moisture=2": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,moisture=3": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,moisture=4": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,moisture=5": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,moisture=6": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 90
+    },
+    "facing=east,moisture=7": {
+      "model": "minecraft:block/farmland_moist",
+      "x": 90,
+      "y": 90
+    },
+    "facing=west,moisture=0": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,moisture=1": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,moisture=2": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,moisture=3": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,moisture=4": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,moisture=5": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,moisture=6": {
+      "model": "minecraft:block/farmland",
+      "x": 90,
+      "y": 270
+    },
+    "facing=west,moisture=7": {
+      "model": "minecraft:block/farmland_moist",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

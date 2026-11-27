@@ -19,6 +19,7 @@ public final class PlanetBlockTints {
 
     @SubscribeEvent
     static void onBlockTints(RegisterColorHandlersEvent.BlockTintSources event) {
-        event.register(List.of(BlockTintSources.grass()), PlanetBlocks.PLANET_TURF.get(), PlanetBlocks.PLANET_GRASS.get());
+        event.register(List.of(BlockTintSources.grass()), PlanetBlocks.PLANET_TURF.get(), PlanetBlocks.PLANET_GRASS.get(),
+                PlanetBlocks.PLANET_GRASS_BLOCK.get());
     }
 }
