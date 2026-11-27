@@ -2,6 +2,7 @@ package io.github.chocodanette.galaxy.worldgen;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
@@ -12,6 +13,10 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+
+import io.github.chocodanette.galaxy.worldgen.farming.PlanetCropBlock;
+import io.github.chocodanette.galaxy.worldgen.farming.PlanetFarmlandBlock;
+import io.github.chocodanette.galaxy.worldgen.farming.PlanetGrassBlock;
 
 /**
  * Blocks made for planets, where there is no single "up".
@@ -28,6 +33,23 @@ public final class PlanetBlocks {
     /** Mycelium on every side, for fungal planets. */
     public static final DeferredBlock<Block> FUNGAL_TURF = BLOCKS.registerSimpleBlock("fungal_turf",
             props -> props.mapColor(MapColor.COLOR_PURPLE).strength(0.6F).sound(SoundType.GRASS));
+
+    // Farming on every side of a planet (see farming.PlanetFarming).
+    /** Grass whose grassy top points any way; vanilla grass is used where it points up. */
+    public static final DeferredBlock<PlanetGrassBlock> PLANET_GRASS_BLOCK = BLOCKS.registerBlock("planet_grass_block",
+            PlanetGrassBlock::new, props -> props.mapColor(MapColor.GRASS).randomTicks().strength(0.6F).sound(SoundType.GRASS));
+    /** Farmland tilled on a side or underside. */
+    public static final DeferredBlock<PlanetFarmlandBlock> PLANET_FARMLAND = BLOCKS.registerBlock("planet_farmland",
+            PlanetFarmlandBlock::new, props -> props.mapColor(MapColor.DIRT).strength(0.6F).sound(SoundType.GRAVEL)
+                    .randomTicks().isSuffocating((state, level, pos) -> true));
+    public static final DeferredBlock<PlanetCropBlock> PLANET_WHEAT = BLOCKS.registerBlock("planet_wheat",
+            props -> new PlanetCropBlock(() -> Items.WHEAT_SEEDS, props), PlanetBlocks::crop);
+    public static final DeferredBlock<PlanetCropBlock> PLANET_CARROTS = BLOCKS.registerBlock("planet_carrots",
+            props -> new PlanetCropBlock(() -> Items.CARROT, props), PlanetBlocks::crop);
+    public static final DeferredBlock<PlanetCropBlock> PLANET_POTATOES = BLOCKS.registerBlock("planet_potatoes",
+            props -> new PlanetCropBlock(() -> Items.POTATO, props), PlanetBlocks::crop);
+    public static final DeferredBlock<PlanetCropBlock> PLANET_BEETROOTS = BLOCKS.registerBlock("planet_beetroots",
+            props -> new PlanetCropBlock.Beetroot(() -> Items.BEETROOT_SEEDS, props), PlanetBlocks::crop);
 
     public static final DeferredBlock<PlanetPlantBlock> PLANET_GRASS = BLOCKS.registerBlock("planet_grass",
             PlanetPlantBlock::new, PlanetBlocks::plant);
@@ -63,6 +85,7 @@ public final class PlanetBlocks {
         ITEMS.registerSimpleBlockItem(HOMEWARD_PETAL);
         ITEMS.registerSimpleBlockItem(HOMEWARD_CORE);
         ITEMS.registerSimpleBlockItem(PLANET_TURF);
+        ITEMS.registerSimpleBlockItem(PLANET_GRASS_BLOCK);
         ITEMS.registerSimpleBlockItem(FUNGAL_TURF);
         ITEMS.registerSimpleBlockItem(PLANET_GRASS);
         ITEMS.registerSimpleBlockItem(STARBLOOM);
@@ -74,6 +97,11 @@ public final class PlanetBlocks {
     private static Block.Properties plant(Block.Properties props) {
         return props.mapColor(MapColor.PLANT).replaceable().noCollision().instabreak()
                 .sound(SoundType.GRASS).pushReaction(PushReaction.POPPED);
+    }
+
+    private static Block.Properties crop(Block.Properties props) {
+        return props.mapColor(MapColor.PLANT).noCollision().randomTicks().instabreak().sound(SoundType.CROP)
+                .pushReaction(PushReaction.POPPED);
     }
 
     private static Block.Properties bloom(Block.Properties props, MapColor color, int light) {
@@ -109,6 +137,7 @@ public final class PlanetBlocks {
     private static void onCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.NATURAL_BLOCKS) {
             event.accept(PLANET_TURF.get());
+            event.accept(PLANET_GRASS_BLOCK.get());
             event.accept(FUNGAL_TURF.get());
             event.accept(PLANET_GRASS.get());
             event.accept(STARBLOOM.get());

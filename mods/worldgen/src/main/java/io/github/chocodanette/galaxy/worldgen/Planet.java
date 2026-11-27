@@ -313,6 +313,35 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         return Direction.getApproximateNearest(-down.x, -down.y, -down.z);
     }
 
+    /**
+     * The side a surface block's grassy top should face: the planet's "up" here, or when
+     * that side is buried (a bump next to it), the open side closest to it, so grass never
+     * faces into the ground.
+     */
+    public Direction surfaceUp(int x, int y, int z) {
+        Direction up = upAt(x, y, z);
+        if (materialAt(x + up.getStepX(), y + up.getStepY(), z + up.getStepZ()) == null) {
+            return up;
+        }
+        Vec3 real = shape == GravityField.Shape.SPHERE
+                ? new Vec3(x + 0.5 - center.x, y + 0.5 - center.y, z + 0.5 - center.z)
+                : GravityMath.downDirection(gravityField(), new Vec3(x + 0.5, y + 0.5, z + 0.5),
+                        GravityMath.VANILLA_DOWN).scale(-1);
+        Direction best = up;
+        double bestDot = Double.NEGATIVE_INFINITY;
+        for (Direction side : Direction.values()) {
+            if (materialAt(x + side.getStepX(), y + side.getStepY(), z + side.getStepZ()) != null) {
+                continue;
+            }
+            double dot = real.x * side.getStepX() + real.y * side.getStepY() + real.z * side.getStepZ();
+            if (dot > bestDot) {
+                bestDot = dot;
+                best = side;
+            }
+        }
+        return best;
+    }
+
     // ---------------------------------------------------------------- trees
 
     /** One block of a tree. */

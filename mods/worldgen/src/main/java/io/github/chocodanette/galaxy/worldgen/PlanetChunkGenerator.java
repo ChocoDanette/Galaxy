@@ -10,6 +10,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import io.github.chocodanette.galaxy.worldgen.farming.PlanetGrassBlock;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.MultifaceBlock;
@@ -87,7 +88,7 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
                     for (int y = y0; y <= y1; y++) {
                         Material material = planet.materialAt(x, y, z);
                         if (material != null) {
-                            chunk.setBlockState(cursor.set(x, y, z), theme.block(material).defaultBlockState());
+                            chunk.setBlockState(cursor.set(x, y, z), groundState(planet, material, x, y, z));
                             continue;
                         }
                         Planet.PlantSpot plant = planet.plantAt(x, y, z);
@@ -214,5 +215,18 @@ public final class PlanetChunkGenerator extends ChunkGenerator {
     public void addDebugScreenInfo(List<String> result, RandomState randomState, BlockPos feetPos, SamplerContext samplerContext) {
         int number = Galaxy.numberAt(feetPos.getX());
         result.add(number == 0 ? "Galaxy: none (empty space)" : "Galaxy: " + number + " (slot " + GalaxyCycle.slot() + ")");
+    }
+
+    /**
+     * The block for one spot of a planet. Grass on the surface is turned so its grassy top
+     * faces out of the planet on every side, which also lets it be tilled there.
+     */
+    private static BlockState groundState(Planet planet, Material material, int x, int y, int z) {
+        Block block = planet.theme().block(material);
+        if ((material == Material.TOP || material == Material.SIDE)
+                && (block == Blocks.GRASS_BLOCK || block == PlanetBlocks.PLANET_TURF.get())) {
+            return PlanetGrassBlock.facing(planet.surfaceUp(x, y, z));
+        }
+        return block.defaultBlockState();
     }
 }

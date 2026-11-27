@@ -1,0 +1,7 @@
+{
+  "values": [
+    "minecraft:grass_block",
+    {"id": "galaxy_worldgen:planet_grass_block", "required": false},
+    {"id": "galaxy_worldgen:planet_turf", "required": false}
+  ]
+}

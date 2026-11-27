@@ -23,5 +23,11 @@
   "galaxy_worldgen.clock.final": "The galaxy collapses in %s...",
   "galaxy_worldgen.clock.recalled": "Galaxy %s collapsed. You were pulled back home with what you carried.",
   "galaxy_worldgen.clock.collapsed_away": "Galaxy %s collapsed while you were away. You were brought back home.",
-  "galaxy_worldgen.clock.collapsed": "Galaxy %s is gone. A new one formed: galaxy %s, where %s planets are common. It lasts %s."
+  "galaxy_worldgen.clock.collapsed": "Galaxy %s is gone. A new one formed: galaxy %s, where %s planets are common. It lasts %s.",
+  "block.galaxy_worldgen.planet_grass_block": "Planet Grass Block",
+  "block.galaxy_worldgen.planet_farmland": "Planet Farmland",
+  "block.galaxy_worldgen.planet_wheat": "Wheat",
+  "block.galaxy_worldgen.planet_carrots": "Carrots",
+  "block.galaxy_worldgen.planet_potatoes": "Potatoes",
+  "block.galaxy_worldgen.planet_beetroots": "Beetroots"
 }

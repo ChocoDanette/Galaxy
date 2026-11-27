@@ -1,0 +1,212 @@
+{
+  "variants": {
+    "age=0,facing=up": {
+      "model": "minecraft:block/wheat_stage0"
+    },
+    "age=1,facing=up": {
+      "model": "minecraft:block/wheat_stage1"
+    },
+    "age=2,facing=up": {
+      "model": "minecraft:block/wheat_stage2"
+    },
+    "age=3,facing=up": {
+      "model": "minecraft:block/wheat_stage3"
+    },
+    "age=4,facing=up": {
+      "model": "minecraft:block/wheat_stage4"
+    },
+    "age=5,facing=up": {
+      "model": "minecraft:block/wheat_stage5"
+    },
+    "age=6,facing=up": {
+      "model": "minecraft:block/wheat_stage6"
+    },
+    "age=7,facing=up": {
+      "model": "minecraft:block/wheat_stage7"
+    },
+    "age=0,facing=down": {
+      "model": "minecraft:block/wheat_stage0",
+      "x": 180
+    },
+    "age=1,facing=down": {
+      "model": "minecraft:block/wheat_stage1",
+      "x": 180
+    },
+    "age=2,facing=down": {
+      "model": "minecraft:block/wheat_stage2",
+      "x": 180
+    },
+    "age=3,facing=down": {
+      "model": "minecraft:block/wheat_stage3",
+      "x": 180
+    },
+    "age=4,facing=down": {
+      "model": "minecraft:block/wheat_stage4",
+      "x": 180
+    },
+    "age=5,facing=down": {
+      "model": "minecraft:block/wheat_stage5",
+      "x": 180
+    },
+    "age=6,facing=down": {
+      "model": "minecraft:block/wheat_stage6",
+      "x": 180
+    },
+    "age=7,facing=down": {
+      "model": "minecraft:block/wheat_stage7",
+      "x": 180
+    },
+    "age=0,facing=north": {
+      "model": "minecraft:block/wheat_stage0",
+      "x": 90
+    },
+    "age=1,facing=north": {
+      "model": "minecraft:block/wheat_stage1",
+      "x": 90
+    },
+    "age=2,facing=north": {
+      "model": "minecraft:block/wheat_stage2",
+      "x": 90
+    },
+    "age=3,facing=north": {
+      "model": "minecraft:block/wheat_stage3",
+      "x": 90
+    },
+    "age=4,facing=north": {
+      "model": "minecraft:block/wheat_stage4",
+      "x": 90
+    },
+    "age=5,facing=north": {
+      "model": "minecraft:block/wheat_stage5",
+      "x": 90
+    },
+    "age=6,facing=north": {
+      "model": "minecraft:block/wheat_stage6",
+      "x": 90
+    },
+    "age=7,facing=north": {
+      "model": "minecraft:block/wheat_stage7",
+      "x": 90
+    },
+    "age=0,facing=south": {
+      "model": "minecraft:block/wheat_stage0",
+      "x": 90,
+      "y": 180
+    },
+    "age=1,facing=south": {
+      "model": "minecraft:block/wheat_stage1",
+      "x": 90,
+      "y": 180
+    },
+    "age=2,facing=south": {
+      "model": "minecraft:block/wheat_stage2",
+      "x": 90,
+      "y": 180
+    },
+    "age=3,facing=south": {
+      "model": "minecraft:block/wheat_stage3",
+      "x": 90,
+      "y": 180
+    },
+    "age=4,facing=south": {
+      "model": "minecraft:block/wheat_stage4",
+      "x": 90,
+      "y": 180
+    },
+    "age=5,facing=south": {
+      "model": "minecraft:block/wheat_stage5",
+      "x": 90,
+      "y": 180
+    },
+    "age=6,facing=south": {
+      "model": "minecraft:block/wheat_stage6",
+      "x": 90,
+      "y": 180
+    },
+    "age=7,facing=south": {
+      "model": "minecraft:block/wheat_stage7",
+      "x": 90,
+      "y": 180
+    },
+    "age=0,facing=east": {
+      "model": "minecraft:block/wheat_stage0",
+      "x": 90,
+      "y": 90
+    },
+    "age=1,facing=east": {
+      "model": "minecraft:block/wheat_stage1",
+      "x": 90,
+      "y": 90
+    },
+    "age=2,facing=east": {
+      "model": "minecraft:block/wheat_stage2",
+      "x": 90,
+      "y": 90
+    },
+    "age=3,facing=east": {
+      "model": "minecraft:block/wheat_stage3",
+      "x": 90,
+      "y": 90
+    },
+    "age=4,facing=east": {
+      "model": "minecraft:block/wheat_stage4",
+      "x": 90,
+      "y": 90
+    },
+    "age=5,facing=east": {
+      "model": "minecraft:block/wheat_stage5",
+      "x": 90,
+      "y": 90
+    },
+    "age=6,facing=east": {
+      "model": "minecraft:block/wheat_stage6",
+      "x": 90,
+      "y": 90
+    },
+    "age=7,facing=east": {
+      "model": "minecraft:block/wheat_stage7",
+      "x": 90,
+      "y": 90
+    },
+    "age=0,facing=west": {
+      "model": "minecraft:block/wheat_stage0",
+      "x": 90,
+      "y": 270
+    },
+    "age=1,facing=west": {
+      "model": "minecraft:block/wheat_stage1",
+      "x": 90,
+      "y": 270
+    },
+    "age=2,facing=west": {
+      "model": "minecraft:block/wheat_stage2",
+      "x": 90,
+      "y": 270
+    },
+    "age=3,facing=west": {
+      "model": "minecraft:block/wheat_stage3",
+      "x": 90,
+      "y": 270
+    },
+    "age=4,facing=west": {
+      "model": "minecraft:block/wheat_stage4",
+      "x": 90,
+      "y": 270
+    },
+    "age=5,facing=west": {
+      "model": "minecraft:block/wheat_stage5",
+      "x": 90,
+      "y": 270
+    },
+    "age=6,facing=west": {
+      "model": "minecraft:block/wheat_stage6",
+      "x": 90,
+      "y": 270
+    },
+    "age=7,facing=west": {
+      "model": "minecraft:block/wheat_stage7",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

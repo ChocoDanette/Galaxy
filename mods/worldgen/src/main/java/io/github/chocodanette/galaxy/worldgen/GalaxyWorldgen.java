@@ -37,6 +37,7 @@ public final class GalaxyWorldgen {
         PlanetBlocks.register(modEventBus);
         BloomRides.register(modEventBus);
         PlanetGravityLink.register();
+        io.github.chocodanette.galaxy.worldgen.farming.PlanetFarming.register();
         GalaxyCommands.register();
         VanillaDimensions.register();
         GalaxyClock.register();
