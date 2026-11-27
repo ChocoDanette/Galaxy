@@ -252,8 +252,7 @@ public abstract class EntityMixin {
             return;
         }
         GravityMath.Pull itemPull = pull.get();
-        if ((self.onGround() || world.mode() == io.github.chocodanette.galaxy.gravity.GravityMode.STEPS)
-                && itemPull.inField()) {
+        if (self.onGround() && itemPull.inField()) {
             // Resting on a block (or always, in step gravity), pull straight into a block face. Near a cube's
             // edge the true pull is slanted, and its sideways part would slide the item off
             // the block and down the side (players get the same fix in GravityApplier).

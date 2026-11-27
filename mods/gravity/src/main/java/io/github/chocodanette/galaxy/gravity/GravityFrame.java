@@ -66,6 +66,19 @@ public final class GravityFrame {
         this.crawling = crawling;
     }
 
+    /** Times this entity crossed a planet's middle in a row without landing (see {@link StuckSafety}). */
+    private int middleCrossings;
+
+    /** Counts one more crossing of a planet's middle and returns the new count. */
+    public int addMiddleCrossing() {
+        middleCrossings = Math.min(middleCrossings + 1, 100);
+        return middleCrossings;
+    }
+
+    public void clearMiddleCrossings() {
+        middleCrossings = 0;
+    }
+
     /** Ticks since the hitbox last swung to another axis (see {@link StuckSafety}). */
     private int ticksSinceBoxTurn = 1000;
     /** Ticks in a row the hitbox has overlapped blocks (see {@link StuckSafety}). */

@@ -58,6 +58,9 @@ public final class GalaxyCommands {
                 .then(Commands.literal("info").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(GalaxyCommands::info))
                 .then(Commands.literal("find").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands.literal("hollow").executes(ctx -> find(ctx, "hollow")))
+                        .then(Commands.literal("round").executes(ctx -> find(ctx, "round")))
+                        .then(Commands.literal("donut").executes(ctx -> find(ctx, "donut")))
+                        .then(Commands.literal("disc").executes(ctx -> find(ctx, "disc")))
                         .then(Commands.literal("gateway").executes(ctx -> find(ctx, "gateway")))
                         .then(Commands.literal("caves").executes(ctx -> find(ctx, "caves")))
                         .then(Commands.literal("trees").executes(ctx -> find(ctx, "trees")))
@@ -73,6 +76,9 @@ public final class GalaxyCommands {
     private static boolean matches(List<Planet> cell, String kind) {
         return switch (kind) {
             case "hollow" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.HOLLOW;
+            case "round" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.SPHERE;
+            case "donut" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.DONUT;
+            case "disc" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.DISC;
             case "gateway" -> cell.size() > 1;
             case "caves" -> cell.stream().anyMatch(Planet::caves);
             case "ember" -> cell.stream().anyMatch(p -> Shrines.of(p) == Shrines.Kind.EMBER);

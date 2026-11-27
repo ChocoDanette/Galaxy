@@ -59,6 +59,9 @@ public final class StuckSafety {
 
     /** Called each tick from {@link GravityFrames} for entities in a dimension with planets. */
     static void tick(LivingEntity entity, GravityFrame frame) {
+        if (entity.onGround()) {
+            frame.clearMiddleCrossings();
+        }
         if (entity.noPhysics || entity.isSpectator() || entity.isPassenger() || entity.isSleeping()) {
             frame.updateStuck(false);
             return;
@@ -75,6 +78,42 @@ public final class StuckSafety {
             entity.resetFallDistance();
             frame.updateStuck(false);
         });
+    }
+
+    /** How close to a planet's middle (blocks) a flip of gravity counts as crossing it. */
+    private static final double MIDDLE_ZONE = 4.0;
+    /** Push added at each crossing of the middle, in blocks per tick, times the crossing count. */
+    private static final double MIDDLE_PUSH = 0.12;
+    /** The push never gets bigger than this, in blocks per tick. */
+    private static final double MAX_MIDDLE_PUSH = 0.8;
+
+    /**
+     * Called when gravity flips right over while an entity floats through a planet's middle
+     * (the center of a cube or ball, the middle of a hollow planet's shell at a door, the core
+     * of a donut's tube or a disc's middle plane). Without help it would bob back and forth
+     * there forever, so each crossing gives a push, bigger each time, along the way it moves
+     * and sideways along the way it faces, until it gets out. Landing resets the count.
+     */
+    static void middleCrossing(LivingEntity entity, GravityFrame frame, GravityField field, Direction newUp) {
+        if (entity.onGround() || field.distanceToMiddle(entity.position()) > MIDDLE_ZONE) {
+            return;
+        }
+        int crossings = frame.addMiddleCrossing();
+        if (!entity.isLocalInstanceAuthoritative()) {
+            return;
+        }
+        double strength = Math.min(MAX_MIDDLE_PUSH, MIDDLE_PUSH * crossings);
+        Vec3 up = newUp.getUnitVec3();
+        Vec3 motion = entity.getDeltaMovement();
+        Vec3 along = motion.lengthSqr() > 1.0E-6 ? motion.normalize() : up.scale(-1);
+        double yaw = Math.toRadians(entity.getYRot());
+        Vec3 facing = frame.toWorld(new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)));
+        Vec3 sideways = facing.subtract(up.scale(facing.dot(up)));
+        if (sideways.lengthSqr() > 1.0E-6) {
+            sideways = sideways.normalize();
+        }
+        entity.setDeltaMovement(motion.add(along.add(sideways).scale(strength * 0.5)));
+        entity.needsSync = true;
     }
 
     /**

@@ -23,5 +23,6 @@
   "galaxy_worldgen.clock.final": "The galaxy collapses in %s...",
   "galaxy_worldgen.clock.recalled": "Galaxy %s collapsed. You were pulled back home with what you carried.",
   "galaxy_worldgen.clock.collapsed_away": "Galaxy %s collapsed while you were away. You were brought back home.",
-  "galaxy_worldgen.clock.collapsed": "Galaxy %s is gone. A new one formed: galaxy %s, where %s planets are common. It lasts %s."
+  "galaxy_worldgen.clock.collapsed": "Galaxy %s is gone. A new one formed: galaxy %s, where %s planets are common. It lasts %s.",
+  "block.galaxy_worldgen.seam_stone": "Seam Stone"
 }

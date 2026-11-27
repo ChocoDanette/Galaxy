@@ -54,7 +54,7 @@ class GalaxyLayoutTest {
             smallest = Math.min(smallest, p.radius());
             biggest = Math.max(biggest, p.radius());
         }
-        assertEquals(EnumSet.of(GravityField.Shape.ROUNDED_CUBE, GravityField.Shape.CUBE, GravityField.Shape.HOLLOW), shapes);
+        assertEquals(EnumSet.allOf(GravityField.Shape.class), shapes);
         assertTrue(themes.size() >= 4, "themes: " + themes);
         assertTrue(biggest > smallest * 2, "sizes " + smallest + " to " + biggest);
     }
@@ -117,7 +117,8 @@ class GalaxyLayoutTest {
         assertNull(planet.materialAt(0, 116, 0));
         assertNull(planet.materialAt(11, 111, 0));
         Material center = planet.materialAt(0, 100, 0);
-        assertTrue(center == Material.CORE || center.ore() != null, "center is " + center);
+        // The very middle is where all six gravity zones meet: seam stone.
+        assertEquals(Material.SEAM, center);
         assertEquals(115, planet.topY(0, 0));
     }
 
@@ -128,8 +129,12 @@ class GalaxyLayoutTest {
         for (int x = -6; x <= 6; x++) {
             for (int z = -6; z <= 6; z++) {
                 assertEquals(106, cube.topY(x, z));
-                assertEquals(Material.TOP, cube.materialAt(x, 106, z));
-                assertEquals(Material.SIDE, cube.materialAt(x, 94, z));
+                // Seam stone runs along the edges, where gravity turns to the next face.
+                boolean edge = Math.abs(x) == 6 || Math.abs(z) == 6;
+                Material top = cube.materialAt(x, 106, z);
+                assertTrue(top == Material.TOP || edge && top == Material.SEAM, "top " + x + " " + z + ": " + top);
+                Material bottom = cube.materialAt(x, 94, z);
+                assertTrue(bottom == Material.SIDE || edge && bottom == Material.SEAM, "bottom " + x + " " + z + ": " + bottom);
             }
         }
         assertNull(cube.materialAt(7, 100, 0));

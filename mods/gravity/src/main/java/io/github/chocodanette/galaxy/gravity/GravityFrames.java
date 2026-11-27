@@ -259,12 +259,10 @@ public final class GravityFrames {
     private static final int ROOF_SEARCH = 16;
 
     /**
-     * True in a cave: under the planet's surface with rock above your head. Hollow planets
-     * don't count (their tunnels and insides have their own gravity, which must turn).
+     * True in a cave or a mine: under the planet's surface with rock above your head.
      */
     private static boolean underground(LivingEntity entity, GravityFrame frame, GravityField field) {
-        if (field.shape() == GravityField.Shape.HOLLOW || field.floats()
-                || field.distanceToSurface(entity.position()) > -UNDERGROUND_DEPTH) {
+        if (field.floats() || field.distanceToSurface(entity.position()) > -UNDERGROUND_DEPTH) {
             return false;
         }
         Vec3 up = frame.up();
@@ -281,19 +279,14 @@ public final class GravityFrames {
         return false;
     }
 
-    /** In a hollow planet's tunnel, a new "up" this far past square to the old one is ignored (cosine). */
-    private static final double HOLLOW_FLIP_GUARD = -0.2;
-
-    /** Ticks after leaving the ground during which "up" still follows the ground. */
-    private static final int GROUND_GRACE_TICKS = 3;
-
     /**
-     * Which way is up for this entity now. In {@link GravityMode#GROUND} mode, while standing
-     * on something (or just after), it follows the ground around the feet; in the air, and
-     * in {@link GravityMode#CENTER} mode, it is the planet's own pull.
+     * Which way is up for this entity now. On a planet it is the "up" of the zone the entity
+     * is in (see {@link GravityField#zoneUp}): always a block direction, changing only where
+     * you cross into another zone. Underground it doesn't change at all, like mining in the
+     * overworld. Around floating gateway planets it turns smoothly with the planet instead.
      */
     private static Vec3 upFor(LivingEntity entity, GravityWorld world, GravityFrame frame) {
-        int offGround = frame.updateGround(entity.onGround());
+        frame.updateGround(entity.onGround());
         if (inOpenSpace(entity, world)) {
             // Between planets: keep whatever way you're turned (see SpaceFlightClient).
             frame.setStepUp(null);
@@ -301,49 +294,28 @@ public final class GravityFrames {
         }
         var pull = GravityMath.pull(world, entity.position(), Double.NaN, frame.holdCenter());
         pull.filter(GravityMath.Pull::inField).ifPresent(p -> frame.setHoldCenter(p.field().center()));
-        Vec3 planetUp = pull.map(GravityMath.Pull::down).orElse(GravityMath.VANILLA_DOWN).scale(-1);
-        if (pull.isPresent() && pull.get().inField() && pull.get().field().inHollowTunnel(entity.position())
-                && planetUp.dot(frame.up()) < HOLLOW_FLIP_GUARD) {
-            // In a hollow planet's tunnel, gravity points to the nearest wall, so drifting over
-            // the middle line would flip it right over. Keep the wall you were on instead.
+        if (pull.isEmpty()) {
             frame.setStepUp(null);
-            return frame.up();
+            return GravityMath.VANILLA_DOWN.scale(-1);
         }
-        if (pull.isPresent() && pull.get().floating()) {
-            // Floating round a gateway planet: turn smoothly with it, no steps.
+        if (pull.get().floating() || !pull.get().inField()) {
+            // Floating round a gateway planet, or the faint pull from space: turn smoothly.
             frame.setStepUp(null);
-            return planetUp;
+            return pull.get().down().scale(-1);
         }
-        if (pull.isPresent() && pull.get().inField() && underground(entity, frame, pull.get().field())) {
-            // In a cave, gravity stays put, like overworld caves, whatever the tunnel does.
-            Direction step = frame.stepUp() != null ? frame.stepUp() : boxAxis(frame);
-            frame.setStepUp(step);
-            return step.getUnitVec3();
+        GravityField field = pull.get().field();
+        Direction current = frame.stepUp() != null ? frame.stepUp() : field.zoneUp(entity.position());
+        if (underground(entity, frame, field)) {
+            // In rock, down stays the down of the face you came in from.
+            frame.setStepUp(current);
+            return current.getUnitVec3();
         }
-        if (world.mode() != GravityMode.STEPS) {
-            frame.setStepUp(null);
+        Direction zone = field.zoneUp(entity.position(), current);
+        if (zone == current.getOpposite()) {
+            StuckSafety.middleCrossing(entity, frame, field, zone);
         }
-        if (world.mode() == GravityMode.STEPS) {
-            if (GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
-                frame.setStepUp(null);
-                return planetUp;
-            }
-            Direction step = GravityMath.stepUp(planetUp, frame.stepUp());
-            frame.setStepUp(step);
-            return step.getUnitVec3();
-        }
-        if (world.mode() != GravityMode.GROUND || offGround > GROUND_GRACE_TICKS
-                || GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
-            return planetUp;
-        }
-        Level level = entity.level();
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        GroundGravity.Solidity solidity = (x, y, z) -> {
-            cursor.set(x, y, z);
-            BlockState state = level.getBlockState(cursor);
-            return !state.isAir() && !state.getCollisionShape(level, cursor).isEmpty();
-        };
-        return GroundGravity.upAt(solidity, entity.position(), frame.up(), planetUp).orElse(planetUp);
+        frame.setStepUp(zone);
+        return zone.getUnitVec3();
     }
 
     /** The way the entity faces, flat in its own frame, in world space. */

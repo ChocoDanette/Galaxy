@@ -172,6 +172,10 @@ public final class GalaxyLayout {
             theme = PlanetTheme.VOID;
         }
         double size = biasedSize(random, galaxy.sizeBias());
+        GravityField.Shape special = varied ? specialShape(galaxy, cellX, cellY, cellZ) : null;
+        if (special != null) {
+            return specialPlanet(random, seed, cellX, cellY, cellZ, special, theme, size);
+        }
         double radius;
         double bumpiness;
         if (cube) {
@@ -189,6 +193,56 @@ public final class GalaxyLayout {
         Vec3 center = placeInCell(random, cellX, cellY, cellZ, extent, extent, extent);
         return new Planet(seed, center, radius,
                 cube ? GravityField.Shape.CUBE : GravityField.Shape.ROUNDED_CUBE, theme, bumpiness, strength, caves);
+    }
+
+    /** Shares of single planets that are round, donuts or discs (the rest are cubes). */
+    static final double ROUND_CHANCE = 0.15;
+    static final double DONUT_CHANCE = 0.10;
+    static final double DISC_CHANCE = 0.10;
+
+    /**
+     * Whether a cell's single planet has a special shape (round, donut or disc), or null for
+     * the usual cube. Decided by its own hash, like Void planets, so the rest stays the same.
+     */
+    static GravityField.Shape specialShape(Galaxy galaxy, int cellX, int cellY, int cellZ) {
+        double roll = Hashing.unit(galaxy.seed() ^ 0x5A4E5EA7D15CL, cellX, cellY, cellZ);
+        if (roll < ROUND_CHANCE) {
+            return GravityField.Shape.SPHERE;
+        }
+        if (roll < ROUND_CHANCE + DONUT_CHANCE) {
+            return GravityField.Shape.DONUT;
+        }
+        if (roll < ROUND_CHANCE + DONUT_CHANCE + DISC_CHANCE) {
+            return GravityField.Shape.DISC;
+        }
+        return null;
+    }
+
+    /** A round planet, a donut (square ring) or a disc. */
+    private static Planet specialPlanet(SplittableRandom random, long seed, int cellX, int cellY, int cellZ,
+            GravityField.Shape shape, PlanetTheme theme, double size) {
+        double strength = 0.7 + random.nextDouble() * 0.3;
+        return switch (shape) {
+            case SPHERE -> {
+                double radius = MIN_ROUNDED_HALF + 2.0 + size * (MAX_ROUNDED_HALF - MIN_ROUNDED_HALF);
+                double bumpiness = (0.02 + random.nextDouble() * 0.06) * Math.min(1.0, radius / 14.0);
+                double extent = radius * (1.0 + bumpiness);
+                boolean caves = radius >= MIN_CAVE_RADIUS && random.nextDouble() < 0.8;
+                Vec3 center = placeInCell(random, cellX, cellY, cellZ, extent, extent, extent);
+                yield new Planet(seed, center, radius, shape, theme, bumpiness, strength, caves);
+            }
+            case DONUT -> {
+                // Half the width of the whole ring; the hole is at least 6 blocks across.
+                double radius = Math.floor(14.0 + size * 10.0) + 0.5;
+                Vec3 center = placeInCell(random, cellX, cellY, cellZ, radius, radius, radius);
+                yield new Planet(seed, center, radius, shape, theme, 0.0, strength, random.nextDouble() < 0.5);
+            }
+            default -> {
+                double radius = Math.floor(12.0 + size * 12.0) + 0.5;
+                Vec3 center = placeInCell(random, cellX, cellY, cellZ, radius, radius, radius);
+                yield new Planet(seed, center, radius, shape, theme, 0.0, strength, random.nextDouble() < 0.5);
+            }
+        };
     }
 
     /** Share of the galaxy's radius, from its middle, inside which no Void planet appears. */
@@ -211,12 +265,12 @@ public final class GalaxyLayout {
         return Hashing.unit(galaxy.seed() ^ 0x7E3D1C0FFEEL, cellX, cellY, cellZ) < VOID_CHANCE;
     }
 
-    /** A big round shell to explore inside, with a tunnel through its top and bottom. */
+    /** A big hollow cube to explore inside, with a door through the middle of each face. */
     private static Planet hollowPlanet(Galaxy galaxy, SplittableRandom random, long seed, int cellX, int cellY,
             int cellZ) {
         PlanetTheme theme = pickTheme(galaxy, random);
         double size = biasedSize(random, galaxy.sizeBias());
-        double radius = MIN_HOLLOW_RADIUS + size * (MAX_SPHERE_RADIUS - MIN_HOLLOW_RADIUS);
+        double radius = Math.floor(MIN_HOLLOW_RADIUS + size * 6.0) + 0.5;
         double strength = 0.7 + random.nextDouble() * 0.3;
         Vec3 center = placeInCell(random, cellX, cellY, cellZ, radius, radius, radius);
         return new Planet(seed, center, radius, GravityField.Shape.HOLLOW, theme, 0.0, strength, false);

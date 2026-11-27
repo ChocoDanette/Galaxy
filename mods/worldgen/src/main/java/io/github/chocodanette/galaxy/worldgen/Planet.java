@@ -135,31 +135,51 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             }
             inner = Math.min(1.0, depth / radius);
         } else if (shape == GravityField.Shape.HOLLOW) {
-            double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (distance > radius) {
+            // A hollow cube: a shell with a big room inside, a little sun in the middle and a
+            // square door through the middle of each face.
+            double ax = Math.abs(dx);
+            double ay = Math.abs(dy);
+            double az = Math.abs(dz);
+            double far = Math.max(ax, Math.max(ay, az));
+            if (far > radius) {
                 return null;
             }
-            double cavity = innerRadius();
-            if (distance < CORE_SUN_RADIUS) {
+            if (dx * dx + dy * dy + dz * dz < CORE_SUN_RADIUS * CORE_SUN_RADIUS) {
                 return Material.GLOW;
             }
-            double outerDepth = radius - distance;
-            double innerDepth = distance - cavity;
-            double wallDepth = Math.sqrt(dx * dx + dz * dz) - GravityField.hollowTunnelRadius(radius);
-            depth = Math.min(outerDepth, Math.min(innerDepth, wallDepth));
-            if (depth < 0) {
+            double cavity = innerRadius();
+            double outerDepth = radius - far;
+            double innerDepth = far - cavity;
+            if (innerDepth < 0 || inDoor(ax, ay, az, far)) {
                 return null;
             }
-            if (depth < 1.0 && innerDepth < 1.0 && depth == innerDepth) {
+            depth = Math.min(outerDepth, innerDepth);
+            if (innerDepth < 1.0 && depth == innerDepth) {
                 // The inner ground: lit here and there by glowing patches, since no light gets in.
                 if (Hashing.unit(seed ^ 0x3C6EF372FE94F82BL, x, y, z) < HOLLOW_GLOW_CHANCE) {
                     return Material.GLOW;
                 }
-                return theme.topFalls() ? Material.SIDE : Material.TOP;
+                return seamOr(x, y, z, theme.topFalls() ? Material.SIDE : Material.TOP);
             }
-            onTop = depth == outerDepth && dy / distance > TOP_THRESHOLD;
+            onTop = depth == outerDepth && dy > 0 && ay >= ax && ay >= az;
             inner = Math.min(1.0, depth / (GravityField.hollowShellThickness(radius) / 2.0));
             soilDepth = HOLLOW_SOIL_DEPTH;
+        } else if (shape == GravityField.Shape.DONUT) {
+            // A square ring around y: its tube is a square seen from the side.
+            double tube = GravityField.donutTube(radius);
+            double u = Math.max(Math.abs(dx), Math.abs(dz)) - (radius - tube);
+            depth = tube - Math.max(Math.abs(u), Math.abs(dy));
+            onTop = dy > 0 && Math.abs(dy) >= Math.abs(u);
+            inner = Math.min(1.0, depth / tube);
+        } else if (shape == GravityField.Shape.DISC) {
+            // A flat round slab across y.
+            double half = GravityField.discHalfThickness(radius);
+            double flat = Math.sqrt(dx * dx + dz * dz);
+            double fromRim = radius - flat;
+            double fromFace = half - Math.abs(dy);
+            depth = Math.min(fromRim, fromFace);
+            onTop = dy > 0 && fromFace <= fromRim;
+            inner = Math.min(1.0, depth / half);
         } else {
             double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (distance > extent()) {
@@ -176,16 +196,47 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             return null;
         }
         if (depth < 1.0) {
-            return onTop ? Material.TOP : Material.SIDE;
+            return seamOr(x, y, z, onTop ? Material.TOP : Material.SIDE);
         }
         if (depth < soilDepth) {
-            return Material.SOIL;
+            return seamOr(x, y, z, Material.SOIL);
         }
 
         // 0 just under the soil, 1 at the very center.
         Material rock = inner > 0.7 ? Material.CORE : inner > 0.4 ? Material.DEEP : Material.STONE;
         Material.Ore ore = oreAt(x, y, z, inner);
-        return ore == null ? rock : Material.ore(ore, rock != Material.STONE);
+        return seamOr(x, y, z, ore == null ? rock : Material.ore(ore, rock != Material.STONE));
+    }
+
+    /** True inside one of a hollow planet's doors: a square hole through the middle of each face. */
+    private boolean inDoor(double ax, double ay, double az, double far) {
+        double door = GravityField.hollowDoorHalf(radius);
+        if (far == ax) {
+            return ay < door && az < door;
+        }
+        if (far == ay) {
+            return ax < door && az < door;
+        }
+        return ax < door && ay < door;
+    }
+
+    /**
+     * Seam stone where two gravity zones meet, so players can see where down changes, on the
+     * surface and underground. A block is on a seam when the block next to it (east, above or
+     * south) is in another zone. Gateway planets have no zones.
+     */
+    private Material seamOr(int x, int y, int z, Material material) {
+        if (isGateway()) {
+            return material;
+        }
+        GravityField field = gravityField();
+        Direction here = field.zoneUp(new Vec3(x + 0.5, y + 0.5, z + 0.5));
+        if (field.zoneUp(new Vec3(x + 1.5, y + 0.5, z + 0.5)) != here
+                || field.zoneUp(new Vec3(x + 0.5, y + 1.5, z + 0.5)) != here
+                || field.zoneUp(new Vec3(x + 0.5, y + 0.5, z + 1.5)) != here) {
+            return Material.SEAM;
+        }
+        return material;
     }
 
     private static double clamp(double value, double limit) {
@@ -305,10 +356,7 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         double dx = x + 0.5 - center.x;
         double dy = y + 0.5 - center.y;
         double dz = z + 0.5 - center.z;
-        if (shape == GravityField.Shape.SPHERE) {
-            return Direction.getApproximateNearest(dx, dy, dz);
-        }
-        Vec3 pos = new Vec3(x + 0.5, y + 0.5, z + 0.5);
+        Vec3 pos = new Vec3(dx + center.x, dy + center.y, dz + center.z);
         Vec3 down = GravityMath.downDirection(gravityField(), pos, GravityMath.VANILLA_DOWN);
         return Direction.getApproximateNearest(-down.x, -down.y, -down.z);
     }
@@ -351,9 +399,10 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
         List<Trees.Style> styles = theme.treeStyles();
         boolean hollow = shape == GravityField.Shape.HOLLOW;
         double outerArea = shape == GravityField.Shape.CUBE || shape == GravityField.Shape.ROUNDED_CUBE
+                || shape == GravityField.Shape.HOLLOW || shape == GravityField.Shape.DONUT
                 ? 24.0 * radius * radius
                 : 4.0 * Math.PI * radius * radius;
-        double innerArea = hollow ? 4.0 * Math.PI * innerRadius() * innerRadius() : 0.0;
+        double innerArea = hollow ? 24.0 * innerRadius() * innerRadius() : 0.0;
         int attempts = (int) ((outerArea + innerArea) * theme.treeDensity());
         SplittableRandom random = new SplittableRandom(seed ^ 0x243F6A8885A308D3L);
         List<int[]> roots = new ArrayList<>();
@@ -380,9 +429,8 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             if (ground != Material.TOP && ground != Material.SIDE) {
                 continue;
             }
-            Direction up = inside
-                    ? Direction.getApproximateNearest(-ux, -uy, -uz)
-                    : Direction.getApproximateNearest(ux, uy, uz);
+            // Trees grow along the "up" of the gravity zone they stand in.
+            Direction up = upAt(root[0], root[1], root[2]);
             int bx = root[0] + up.getStepX();
             int by = root[1] + up.getStepY();
             int bz = root[2] + up.getStepZ();
@@ -526,13 +574,17 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
 
     /**
      * The block just above the top of the planet, where a player can stand. Hollow planets
-     * have their tunnel at the top, so you land a little to the side of it.
+     * have a door in the middle of the top and donuts a hole, so you land beside them.
      */
     public Vec3 landingSpot() {
         int x = (int) Math.floor(center.x);
         int z = (int) Math.floor(center.z);
         if (shape == GravityField.Shape.HOLLOW) {
-            x += (int) Math.ceil(GravityField.hollowTunnelRadius(radius) + 2.0);
+            // Beside the door in the middle of the top face.
+            x += (int) Math.ceil(GravityField.hollowDoorHalf(radius) + 3.0);
+        } else if (shape == GravityField.Shape.DONUT) {
+            // On top of the ring, not in its hole.
+            x += (int) Math.round(radius - GravityField.donutTube(radius));
         }
         return new Vec3(x + 0.5, topY(x, z) + 1, z + 0.5);
     }

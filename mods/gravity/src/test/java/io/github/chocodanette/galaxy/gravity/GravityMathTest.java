@@ -8,6 +8,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.core.Direction;
+
 import net.minecraft.world.phys.Vec3;
 
 class GravityMathTest {
@@ -67,16 +69,6 @@ class GravityMathTest {
     }
 
     @Test
-    void cubeEdgesBendGradually() {
-        GravityField cube = new GravityField(Vec3.ZERO, 5, 25, 1, GravityField.Shape.CUBE);
-        Vec3 corner = GravityMath.downDirection(List.of(cube), new Vec3(5, 5, 0));
-        double s = Math.sqrt(0.5);
-        assertVec(new Vec3(-s, -s, 0), corner);
-        Vec3 nearEdge = GravityMath.downDirection(List.of(cube), new Vec3(4, 5, 0));
-        assertTrue(nearEdge.y < -s && nearEdge.x < 0, "tilts partway near the edge");
-    }
-
-    @Test
     void cubeSurfaceDistance() {
         GravityField cube = new GravityField(Vec3.ZERO, 5, 25, 1, GravityField.Shape.CUBE);
         assertEquals(0.0, cube.distanceToSurface(new Vec3(1, 5, -2)), EPS);
@@ -114,109 +106,12 @@ class GravityMathTest {
     }
 
     @Test
-    void hollowPlanetPullsInwardOutsideAndOutwardInside() {
-        // Radius 20: a 5 block shell, so the open space inside reaches 15 blocks from the center.
-        GravityField hollow = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.HOLLOW);
-        assertEquals(15.0, hollow.innerRadius(), EPS);
-        assertVec(new Vec3(-1, 0, 0), GravityMath.downDirection(List.of(hollow), new Vec3(25, 0, 0)));
-        assertVec(new Vec3(1, 0, 0), GravityMath.downDirection(List.of(hollow), new Vec3(12, 0, 0)));
-        assertVec(new Vec3(0, 0, -1), GravityMath.downDirection(List.of(hollow), new Vec3(0, 0, -10)));
-        assertEquals(0.0, hollow.distanceToSurface(new Vec3(15, 0, 0)), EPS);
-        assertEquals(3.0, hollow.distanceToSurface(new Vec3(12, 0, 0)), EPS);
-        assertEquals(5.0, hollow.distanceToSurface(new Vec3(0, 0, 25)), EPS);
-    }
-
-    @Test
-    void hollowPlanetTunnelPullsTowardItsWall() {
-        GravityField hollow = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.HOLLOW);
-        // Halfway through the shell, inside the tunnel at the top: down points out to the tunnel wall.
-        Vec3 down = GravityMath.downDirection(List.of(hollow), new Vec3(2, 17.5, 0));
-        assertTrue(down.x > 0.95, "down in the tunnel was " + down);
-        Vec3 otherSide = GravityMath.downDirection(List.of(hollow), new Vec3(0, -17.5, -2));
-        assertTrue(otherSide.z < -0.95, "down in the bottom tunnel was " + otherSide);
-    }
-
-    @Test
-    void hollowPlanetGravityTurnsSmoothlyFromOutsideThroughTheTunnelToInside() {
-        GravityField hollow = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.HOLLOW);
-        // Follow a path one block above the ground: across the top, down the tunnel wall and
-        // onto the inner ground. Down should never jump around along the way.
-        List<Vec3> path = new java.util.ArrayList<>();
-        for (int i = 0; i <= 100; i++) {
-            double angle = Math.toRadians(60 - i * 0.46); // over the top, toward the tunnel
-            path.add(new Vec3(Math.sin(angle) * 21, Math.cos(angle) * 21, 0));
-        }
-        Vec3 rim = path.get(path.size() - 1);
-        double bottomAngle = Math.asin(2.0 / 14.0);
-        for (int i = 1; i <= 100; i++) {
-            double t = i / 100.0;
-            // Across to 1 block from the tunnel wall, then down the tunnel.
-            path.add(t < 0.3
-                    ? new Vec3(rim.x + (2.0 - rim.x) * t / 0.3, rim.y, 0)
-                    : new Vec3(2.0, rim.y + (Math.cos(bottomAngle) * 14 - rim.y) * (t - 0.3) / 0.7, 0));
-        }
-        for (int i = 1; i <= 100; i++) {
-            double angle = bottomAngle + Math.toRadians(i * 0.5); // out onto the inner ground
-            path.add(new Vec3(Math.sin(angle) * 14, Math.cos(angle) * 14, 0));
-        }
-        Vec3 previous = null;
-        for (Vec3 pos : path) {
-            Vec3 down = GravityMath.downDirection(List.of(hollow), pos);
-            if (previous != null) {
-                assertTrue(Math.toDegrees(Math.acos(Math.min(1, previous.dot(down)))) < 45,
-                        "gravity jumped near " + pos);
-            }
-            previous = down;
-        }
-    }
-
-    @Test
-    void stepGravityPicksTheNearestFaceAndWaitsPastTheDiagonal() {
-        net.minecraft.core.Direction up = null;
-        // Walking over a round edge from the top to the east side: up turns from +y to +x.
-        for (int degrees = 0; degrees <= 90; degrees++) {
-            double a = Math.toRadians(degrees);
-            up = GravityMath.stepUp(new Vec3(Math.sin(a), Math.cos(a), 0), up);
-            if (degrees < 45 + GravityMath.STEP_SWITCH_MARGIN_DEGREES) {
-                assertEquals(net.minecraft.core.Direction.UP, up, "switched too early at " + degrees);
-            }
-        }
-        assertEquals(net.minecraft.core.Direction.EAST, up);
-        // Walking back, it holds the side until well past the diagonal the other way.
-        for (int degrees = 90; degrees >= 0; degrees--) {
-            double a = Math.toRadians(degrees);
-            up = GravityMath.stepUp(new Vec3(Math.sin(a), Math.cos(a), 0), up);
-            if (degrees > 45 - GravityMath.STEP_SWITCH_MARGIN_DEGREES) {
-                assertEquals(net.minecraft.core.Direction.EAST, up, "switched back too early at " + degrees);
-            }
-        }
-        assertEquals(net.minecraft.core.Direction.UP, up);
-        // Standing still on the diagonal never flips.
-        Vec3 diagonal = new Vec3(1, 1, 0).normalize();
-        net.minecraft.core.Direction held = net.minecraft.core.Direction.UP;
-        for (int i = 0; i < 10; i++) {
-            held = GravityMath.stepUp(diagonal, held);
-            assertEquals(net.minecraft.core.Direction.UP, held);
-        }
-    }
-
-    @Test
-    void overlappingRangesBlendSmoothlyFromOnePlanetToTheOther() {
-        // Two planets side by side, ranges overlapping. Walk a line past both: down never jumps.
+    void nextToEachOfTwoOverlappingPlanetsItIsThatPlanetsPull() {
         GravityField a = new GravityField(Vec3.ZERO, 10, 30, 1);
         GravityField b = new GravityField(new Vec3(40, 0, 0), 10, 30, 1);
         GravityWorld world = GravityWorld.of(List.of(a, b));
-        Vec3 last = null;
-        for (double x = 0; x <= 40; x += 0.25) {
-            Vec3 down = GravityMath.pull(world, new Vec3(x, 15, 0), Double.NaN).orElseThrow().down();
-            if (last != null) {
-                double turn = Math.toDegrees(Math.acos(Math.min(1, last.dot(down))));
-                assertTrue(turn < 6, "down jumped by " + turn + " degrees at x=" + x);
-            }
-            last = down;
-        }
-        // Next to a planet, it is its own pull.
         assertVec(new Vec3(0, -1, 0), GravityMath.pull(world, new Vec3(0, 11, 0), Double.NaN).orElseThrow().down());
+        assertVec(new Vec3(1, 0, 0), GravityMath.pull(world, new Vec3(29, 1, 0), Double.NaN).orElseThrow().down());
     }
 
     @Test
@@ -260,5 +155,92 @@ class GravityMathTest {
         assertTrue(onBig.scale() < 0.31 && onBig.scale() > 0.2, "scale " + onBig.scale());
         // Far from the tiny planet, normal gravity.
         assertEquals(1.0, GravityMath.pull(world, new Vec3(-10.5, 0, 0), Double.NaN).orElseThrow().scale(), EPS);
+    }
+
+    @Test
+    void cubeZonesSplitAlongTheDiagonals() {
+        GravityField cube = new GravityField(Vec3.ZERO, 5, 25, 1, GravityField.Shape.ROUNDED_CUBE);
+        // Over the rounded edge, down is still one block direction: the zone you are in.
+        assertVec(new Vec3(0, -1, 0), GravityMath.downDirection(List.of(cube), new Vec3(4.9, 5, 0)));
+        assertVec(new Vec3(-1, 0, 0), GravityMath.downDirection(List.of(cube), new Vec3(5.1, 5, 0)));
+        // Deep inside, the zones run all the way to the middle.
+        assertVec(new Vec3(0, 0, 1), GravityMath.downDirection(List.of(cube), new Vec3(0.5, 1, -2)));
+    }
+
+    @Test
+    void zonesKeepTheCurrentOneUntilPastTheBuffer() {
+        GravityField cube = new GravityField(Vec3.ZERO, 10, 30, 1, GravityField.Shape.CUBE);
+        Direction up = Direction.UP;
+        // Walking from the top over the east edge: up holds until a block past the diagonal.
+        for (double x = 8; x <= 13; x += 0.1) {
+            Vec3 pos = new Vec3(x, 10.5, 0);
+            up = cube.zoneUp(pos, up);
+            if (x < 10.5 + GravityField.ZONE_BUFFER - 0.05) {
+                assertEquals(Direction.UP, up, "switched too early at x=" + x);
+            }
+        }
+        assertEquals(Direction.EAST, up);
+        // Standing on the diagonal itself never flips.
+        Direction held = Direction.EAST;
+        for (int i = 0; i < 10; i++) {
+            held = cube.zoneUp(new Vec3(11, 11, 0), held);
+        }
+        assertEquals(Direction.EAST, held);
+    }
+
+    @Test
+    void roundPlanetsUseTheSameSixZones() {
+        GravityField ball = new GravityField(Vec3.ZERO, 12, 30, 1);
+        assertEquals(Direction.UP, ball.zoneUp(new Vec3(3, 12, 2)));
+        assertEquals(Direction.NORTH, ball.zoneUp(new Vec3(4, -3, -11)));
+    }
+
+    @Test
+    void hollowPlanetPullsInwardOutsideAndOntoTheInsideWallsInside() {
+        // Half size 20: a 5 block shell, so the room inside reaches 15 blocks from the center.
+        GravityField hollow = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.HOLLOW);
+        assertEquals(15.0, hollow.innerRadius(), EPS);
+        assertVec(new Vec3(-1, 0, 0), GravityMath.downDirection(List.of(hollow), new Vec3(25, 0, 0)));
+        assertVec(new Vec3(1, 0, 0), GravityMath.downDirection(List.of(hollow), new Vec3(12, 3, 0)));
+        assertVec(new Vec3(0, 0, -1), GravityMath.downDirection(List.of(hollow), new Vec3(2, 0, -10)));
+        assertEquals(0.0, hollow.distanceToSurface(new Vec3(15, 0, 0)), EPS);
+        assertEquals(3.0, hollow.distanceToSurface(new Vec3(12, 0, 0)), EPS);
+        assertEquals(5.0, hollow.distanceToSurface(new Vec3(0, 0, 25)), EPS);
+        // The middle of the shell is the border; the side you came from holds for a block.
+        assertEquals(Direction.UP, hollow.zoneUp(new Vec3(0, 17, 0), Direction.UP));
+        assertEquals(Direction.DOWN, hollow.zoneUp(new Vec3(0, 16, 0), Direction.UP));
+    }
+
+    @Test
+    void donutWalksOnTopBottomAndBothWalls() {
+        // Half width 20, tube half 6: the tube's middle line runs 14 blocks out.
+        GravityField donut = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.DONUT);
+        assertEquals(Direction.UP, donut.zoneUp(new Vec3(14, 7, 3)));
+        assertEquals(Direction.DOWN, donut.zoneUp(new Vec3(-14, -7, 0)));
+        assertEquals(Direction.EAST, donut.zoneUp(new Vec3(21, 1, 0)));
+        // The inner wall, facing the hole: down points out into the ring.
+        assertEquals(Direction.WEST, donut.zoneUp(new Vec3(7, 0, 2)));
+        assertEquals(Direction.NORTH, donut.zoneUp(new Vec3(2, -1, -21)));
+        assertEquals(0.0, donut.distanceToSurface(new Vec3(14, 6, 0)), EPS);
+        assertEquals(0.0, donut.distanceToSurface(new Vec3(8, 0, 1)), EPS);
+    }
+
+    @Test
+    void discPullsDownOnTopUpBelowAndInwardOnTheRim() {
+        // Radius 20: 5 blocks thick on each side of its middle.
+        GravityField disc = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.DISC);
+        assertEquals(Direction.UP, disc.zoneUp(new Vec3(5, 6, -3)));
+        assertEquals(Direction.DOWN, disc.zoneUp(new Vec3(-10, -6, 4)));
+        assertEquals(Direction.EAST, disc.zoneUp(new Vec3(21, 1, 0)));
+        assertEquals(Direction.NORTH, disc.zoneUp(new Vec3(2, -2, -21)));
+        assertEquals(0.0, disc.distanceToSurface(new Vec3(3, 5, 0)), EPS);
+    }
+
+    @Test
+    void middleIsWhereOppositeZonesMeet() {
+        GravityField cube = new GravityField(Vec3.ZERO, 10, 30, 1, GravityField.Shape.CUBE);
+        assertEquals(1.0, cube.distanceToMiddle(new Vec3(1, -0.5, 0)), EPS);
+        GravityField disc = new GravityField(Vec3.ZERO, 20, 40, 1, GravityField.Shape.DISC);
+        assertEquals(0.5, disc.distanceToMiddle(new Vec3(8, 0.5, 3)), EPS);
     }
 }

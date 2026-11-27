@@ -78,14 +78,24 @@ class GravityFrameTest {
 
     private static final Vec3 PLANET = new Vec3(0.5, 100.5, 0.5);
 
+    /** The nearest point of a rounded cube's inner sharp cube (the surface is a fixed distance from it). */
+    private static Vec3 corePoint(GravityField field, Vec3 pos) {
+        double core = field.radius() - GravityField.roundedBevel(field.radius());
+        Vec3 c = field.center();
+        return new Vec3(
+                Math.max(c.x - core, Math.min(c.x + core, pos.x)),
+                Math.max(c.y - core, Math.min(c.y + core, pos.y)),
+                Math.max(c.z - core, Math.min(c.z + core, pos.z)));
+    }
+
     /** Walks along the local "forward" over a rounded cube, keeping to its surface. */
     private static Vec3 walk(GravityField field, GravityFrame frame, Vec3 pos, float yaw, int ticks) {
         for (int i = 0; i < ticks; i++) {
-            Vec3 up = pos.subtract(field.pullPoint(pos)).normalize();
+            Vec3 up = pos.subtract(corePoint(field, pos)).normalize();
             frame.tick(up);
             frame.settleTwist();
             pos = pos.add(worldLook(frame, yaw).scale(0.25));
-            Vec3 newUp = pos.subtract(field.pullPoint(pos)).normalize();
+            Vec3 newUp = pos.subtract(corePoint(field, pos)).normalize();
             pos = pos.subtract(newUp.scale(field.distanceToSurface(pos)));
         }
         return pos;

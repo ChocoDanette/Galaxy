@@ -69,7 +69,8 @@ public final class Shrines {
 
     /** The kind of shrine on this planet, or null for none. Depends only on the planet. */
     public static Kind of(Planet planet) {
-        if (planet.shape() == GravityField.Shape.HOLLOW || planet.radius() < MIN_RADIUS || isArrival(planet)) {
+        if (planet.shape() == GravityField.Shape.HOLLOW || planet.shape() == GravityField.Shape.DONUT
+                || planet.radius() < MIN_RADIUS || isArrival(planet)) {
             return null;
         }
         if (planet.theme() == PlanetTheme.VOID) {
