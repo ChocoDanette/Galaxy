@@ -253,37 +253,11 @@ public final class GravityFrames {
         return false;
     }
 
-    /** How far under a planet's surface you count as underground, in blocks. */
-    private static final double UNDERGROUND_DEPTH = 1.0;
-    /** How far above your head we look for a cave roof, in blocks. */
-    private static final int ROOF_SEARCH = 16;
-
-    /**
-     * True in a cave or a mine: under the planet's surface with rock above your head.
-     */
-    private static boolean underground(LivingEntity entity, GravityFrame frame, GravityField field) {
-        if (field.floats() || field.distanceToSurface(entity.position()) > -UNDERGROUND_DEPTH) {
-            return false;
-        }
-        Vec3 up = frame.up();
-        Vec3 head = entity.position().add(up.scale(entity.getBbHeight()));
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        Level level = entity.level();
-        for (int i = 0; i < ROOF_SEARCH; i++) {
-            Vec3 at = head.add(up.scale(i));
-            cursor.set(Math.floor(at.x), Math.floor(at.y), Math.floor(at.z));
-            if (!level.getBlockState(cursor).getCollisionShape(level, cursor).isEmpty()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * Which way is up for this entity now. On a planet it is the "up" of the zone the entity
-     * is in (see {@link GravityField#zoneUp}): always a block direction, changing only where
-     * you cross into another zone. Underground it doesn't change at all, like mining in the
-     * overworld. Around floating gateway planets it turns smoothly with the planet instead.
+     * is in (see {@link GravityField#blockUp}): always a block direction, the same above and
+     * under ground. In a block the border runs through you keep the down you came in with,
+     * and turn only on stepping into a block of one zone. Around floating gateway planets it turns smoothly with the planet instead.
      */
     private static Vec3 upFor(LivingEntity entity, GravityWorld world, GravityFrame frame) {
         frame.updateGround(entity.onGround());
@@ -305,12 +279,10 @@ public final class GravityFrames {
         }
         GravityField field = pull.get().field();
         Direction current = frame.stepUp() != null ? frame.stepUp() : field.zoneUp(entity.position());
-        if (underground(entity, frame, field)) {
-            // In rock, down stays the down of the face you came in from.
-            frame.setStepUp(current);
-            return current.getUnitVec3();
-        }
-        Direction zone = field.zoneUp(entity.position(), current);
+        // The block at your feet decides (a hair up from them, so standing on a block's top
+        // counts as the block you stand in, not the one below).
+        Vec3 feet = entity.position().add(current.getUnitVec3().scale(0.05));
+        Direction zone = field.blockUp(BlockPos.containing(feet), current);
         if (zone == current.getOpposite()) {
             StuckSafety.middleCrossing(entity, frame, field, zone);
         }

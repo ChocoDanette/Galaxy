@@ -108,9 +108,10 @@ public record GravityField(Vec3 center, double radius, double range, double stre
     // ------------------------------------------------------------------ zone gravity
     //
     // Every planet is split into zones, and each zone has one "down" along a block direction.
-    // Down only changes where you cross from one zone into the next, and those borders are
-    // marked in the world (see the worldgen's seam stone). Inside a zone the planet plays like
-    // normal Minecraft: body, hitbox, blocks and mobs all line up.
+    // The planet's core decides it for every block: a block inside one zone has that zone's
+    // down, and a block the border between zones runs through has both downs. Players, mobs,
+    // items, sand and water all follow the block they are in. Inside a zone the planet plays
+    // like normal Minecraft: body, hitbox, blocks and mobs all line up.
 
     /**
      * How far past a zone border you must go before down switches back the way you came, in
@@ -225,6 +226,32 @@ public record GravityField(Vec3 center, double radius, double range, double stre
     /** True if "up" along this direction points away from the center at this offset. */
     private static boolean facesOut(Direction up, double dx, double dy, double dz) {
         return up.getStepX() * dx + up.getStepY() * dy + up.getStepZ() * dz >= 0;
+    }
+
+    /**
+     * The "up"s a block allows: the zones its cube touches (checked at its eight corners, a
+     * hair inside). Most blocks have one; blocks the border runs through have two or more.
+     */
+    public java.util.EnumSet<Direction> blockUps(net.minecraft.core.BlockPos pos) {
+        java.util.EnumSet<Direction> ups = java.util.EnumSet.noneOf(Direction.class);
+        for (int i = 0; i < 8; i++) {
+            ups.add(zoneUp(new Vec3(pos.getX() + ((i & 1) == 0 ? 0.01 : 0.99),
+                    pos.getY() + ((i & 2) == 0 ? 0.01 : 0.99),
+                    pos.getZ() + ((i & 4) == 0 ? 0.01 : 0.99))));
+        }
+        return ups;
+    }
+
+    /**
+     * The "up" for something in this block that had {@code current} before: it keeps
+     * {@code current} while the block allows it, and otherwise takes the zone of the block's
+     * middle.
+     */
+    public Direction blockUp(net.minecraft.core.BlockPos pos, Direction current) {
+        if (current != null && blockUps(pos).contains(current)) {
+            return current;
+        }
+        return zoneUp(Vec3.atCenterOf(pos));
     }
 
     /** Unit vector "down" for the zone at a position (no memory of the previous zone). */
