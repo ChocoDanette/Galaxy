@@ -235,35 +235,37 @@ public record GravityField(Vec3 center, double radius, double range, double stre
     }
 
     /**
-     * Near a border, how deep into the next zone a block's floor faces reach, as a share of
-     * how deep it is into its own zone. 0.6 is a wedge of about 30 degrees each side of the
-     * border, so it gets wider the deeper you dig (like the drawing's yellow blocks).
+     * The face change line: a block has the next zone's floor too when some part of it is
+     * at least this far into that zone compared with its own (1/0.8 in Lucas's drawing).
+     * Blocks from the diagonal to that line, and blocks the line goes through, have two
+     * floor faces (three at a cube's corners).
      */
-    public static final double FLOOR_WEDGE = 0.6;
-    /** ... and at least this close to the border (blocks), so the edge blocks of a face count. */
-    public static final double FLOOR_SLACK = 0.75;
+    public static final double FACE_CHANGE_RATIO = 0.8;
 
     /**
      * The faces of a block that count as floor, given as the "up" an entity standing on that
-     * face would have. A block inside a zone has one (its zone's), a block near the border
-     * between two zones has both, and near a corner of a cube, three. Only floor faces hold
-     * an entity: walk past the edge of any other face and you fall.
+     * face would have. Only floor faces hold an entity's down: walk past the edge of a block
+     * whose front face is not floor and you fall.
      */
     public java.util.EnumSet<Direction> blockUps(net.minecraft.core.BlockPos pos) {
-        double[] score = zoneScores(Vec3.atCenterOf(pos), null);
-        double best = Double.NEGATIVE_INFINITY;
-        for (double value : score) {
-            best = Math.max(best, value);
-        }
-        double needed = Math.min(best * FLOOR_WEDGE, best - FLOOR_SLACK);
         java.util.EnumSet<Direction> ups = java.util.EnumSet.noneOf(Direction.class);
-        for (Direction dir : Direction.values()) {
-            if (score[dir.ordinal()] > Double.NEGATIVE_INFINITY && score[dir.ordinal()] >= needed) {
-                ups.add(dir);
+        ups.add(zoneUp(Vec3.atCenterOf(pos)));
+        // The ratio between two zones is most extreme at the block's corners.
+        for (int i = 0; i < 8; i++) {
+            double[] score = zoneScores(new Vec3(pos.getX() + (i & 1), pos.getY() + ((i >> 1) & 1),
+                    pos.getZ() + ((i >> 2) & 1)), null);
+            double best = Double.NEGATIVE_INFINITY;
+            for (double value : score) {
+                best = Math.max(best, value);
             }
-        }
-        if (ups.isEmpty()) {
-            ups.add(zoneUp(Vec3.atCenterOf(pos)));
+            if (best <= 0) {
+                continue;
+            }
+            for (Direction dir : Direction.values()) {
+                if (score[dir.ordinal()] >= best * FACE_CHANGE_RATIO) {
+                    ups.add(dir);
+                }
+            }
         }
         return ups;
     }

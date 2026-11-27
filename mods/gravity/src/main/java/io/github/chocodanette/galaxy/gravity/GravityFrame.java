@@ -79,6 +79,17 @@ public final class GravityFrame {
         middleCrossings = 0;
     }
 
+    /** The last block this entity stood on with a floor face (see GravityFrames.floorUp). */
+    private net.minecraft.core.BlockPos lastFloor;
+
+    public net.minecraft.core.BlockPos lastFloor() {
+        return lastFloor;
+    }
+
+    public void setLastFloor(net.minecraft.core.BlockPos pos) {
+        lastFloor = pos;
+    }
+
     /** Ticks since the hitbox last swung to another axis (see {@link StuckSafety}). */
     private int ticksSinceBoxTurn = 1000;
     /** Ticks in a row the hitbox has overlapped blocks (see {@link StuckSafety}). */
