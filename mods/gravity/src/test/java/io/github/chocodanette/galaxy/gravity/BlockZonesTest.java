@@ -31,7 +31,20 @@ class BlockZonesTest {
         BlockPos diagonal = new BlockPos(5, 105, 0);
         assertEquals(Direction.EAST, CUBE.blockUp(diagonal, Direction.EAST));
         assertEquals(Direction.UP, CUBE.blockUp(diagonal, Direction.UP));
-        // One block further onto the top face, only up is left.
-        assertEquals(Direction.UP, CUBE.blockUp(new BlockPos(4, 106, 0), Direction.EAST));
+        // Further onto the top face, only up is left.
+        assertEquals(Direction.UP, CUBE.blockUp(new BlockPos(2, 108, 0), Direction.EAST));
+    }
+
+    @Test
+    void theTwoFloorWedgeWidensWithDepth() {
+        // Near the surface, blocks away from the edge have one floor...
+        assertEquals(EnumSet.of(Direction.UP), CUBE.blockUps(new BlockPos(4, 110, 0)));
+        // ... deeper down, blocks further from the diagonal do too.
+        assertEquals(EnumSet.of(Direction.UP, Direction.EAST), CUBE.blockUps(new BlockPos(6, 104, 0)));
+    }
+
+    @Test
+    void cornerBlocksHaveThreeFloors() {
+        assertEquals(EnumSet.of(Direction.UP, Direction.EAST, Direction.SOUTH), CUBE.blockUps(new BlockPos(5, 105, 5)));
     }
 }

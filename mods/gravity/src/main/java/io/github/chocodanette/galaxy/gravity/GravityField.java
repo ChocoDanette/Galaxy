@@ -141,6 +141,24 @@ public record GravityField(Vec3 center, double radius, double range, double stre
      * </ul>
      */
     public Direction zoneUp(Vec3 pos, Direction current) {
+        double[] score = zoneScores(pos, current);
+        // Up wins ties (right at the middle), so you start the right way up.
+        Direction best = Direction.UP;
+        double bestScore = score[Direction.UP.ordinal()];
+        for (Direction dir : Direction.values()) {
+            if (score[dir.ordinal()] > bestScore) {
+                bestScore = score[dir.ordinal()];
+                best = dir;
+            }
+        }
+        if (current != null && current != best && score[current.ordinal()] >= bestScore - ZONE_BUFFER) {
+            return current;
+        }
+        return best;
+    }
+
+    /** How far a position is into each zone (indexed by {@link Direction#ordinal()}). */
+    private double[] zoneScores(Vec3 pos, Direction current) {
         double dx = pos.x - center.x;
         double dy = pos.y - center.y;
         double dz = pos.z - center.z;
@@ -198,19 +216,7 @@ public record GravityField(Vec3 center, double radius, double range, double stre
             }
             default -> boxScores(score, dx, dy, dz, 1.0);
         }
-        // Up wins ties (right at the middle), so you start the right way up.
-        Direction best = Direction.UP;
-        double bestScore = score[Direction.UP.ordinal()];
-        for (Direction dir : Direction.values()) {
-            if (score[dir.ordinal()] > bestScore) {
-                bestScore = score[dir.ordinal()];
-                best = dir;
-            }
-        }
-        if (current != null && current != best && score[current.ordinal()] >= bestScore - ZONE_BUFFER) {
-            return current;
-        }
-        return best;
+        return score;
     }
 
     /** Cube zones: each face scores how far out the position is along it ({@code sign} -1 flips them). */
@@ -229,15 +235,35 @@ public record GravityField(Vec3 center, double radius, double range, double stre
     }
 
     /**
-     * The "up"s a block allows: the zones its cube touches (checked at its eight corners, a
-     * hair inside). Most blocks have one; blocks the border runs through have two or more.
+     * Near a border, how deep into the next zone a block's floor faces reach, as a share of
+     * how deep it is into its own zone. 0.6 is a wedge of about 30 degrees each side of the
+     * border, so it gets wider the deeper you dig (like the drawing's yellow blocks).
+     */
+    public static final double FLOOR_WEDGE = 0.6;
+    /** ... and at least this close to the border (blocks), so the edge blocks of a face count. */
+    public static final double FLOOR_SLACK = 0.75;
+
+    /**
+     * The faces of a block that count as floor, given as the "up" an entity standing on that
+     * face would have. A block inside a zone has one (its zone's), a block near the border
+     * between two zones has both, and near a corner of a cube, three. Only floor faces hold
+     * an entity: walk past the edge of any other face and you fall.
      */
     public java.util.EnumSet<Direction> blockUps(net.minecraft.core.BlockPos pos) {
+        double[] score = zoneScores(Vec3.atCenterOf(pos), null);
+        double best = Double.NEGATIVE_INFINITY;
+        for (double value : score) {
+            best = Math.max(best, value);
+        }
+        double needed = Math.min(best * FLOOR_WEDGE, best - FLOOR_SLACK);
         java.util.EnumSet<Direction> ups = java.util.EnumSet.noneOf(Direction.class);
-        for (int i = 0; i < 8; i++) {
-            ups.add(zoneUp(new Vec3(pos.getX() + ((i & 1) == 0 ? 0.01 : 0.99),
-                    pos.getY() + ((i & 2) == 0 ? 0.01 : 0.99),
-                    pos.getZ() + ((i & 4) == 0 ? 0.01 : 0.99))));
+        for (Direction dir : Direction.values()) {
+            if (score[dir.ordinal()] > Double.NEGATIVE_INFINITY && score[dir.ordinal()] >= needed) {
+                ups.add(dir);
+            }
+        }
+        if (ups.isEmpty()) {
+            ups.add(zoneUp(Vec3.atCenterOf(pos)));
         }
         return ups;
     }

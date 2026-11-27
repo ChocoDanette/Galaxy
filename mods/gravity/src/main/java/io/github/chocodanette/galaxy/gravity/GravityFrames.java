@@ -254,13 +254,23 @@ public final class GravityFrames {
     }
 
     /**
-     * Which way is up for this entity now. On a planet it is the "up" of the zone the entity
-     * is in (see {@link GravityField#blockUp}): always a block direction, the same above and
-     * under ground. In a block the border runs through you keep the down you came in with,
-     * and turn only on stepping into a block of one zone. Around floating gateway planets it turns smoothly with the planet instead.
+     * Which way is up for this entity now. On a planet each block face is floor or not (see
+     * {@link GravityField#blockUps}), and the entity stands on floor faces:
+     *
+     * <ol>
+     * <li>While it touches a floor face below its feet, it keeps that floor. If it walks into
+     * a wall at least as tall as itself whose face is floor too (inside a corner), it steps
+     * onto the wall.</li>
+     * <li>Just after it walks off an edge (not a jump), if a floor face touches its side (the
+     * other face of the corner block), it goes on walking on that face instead of falling.</li>
+     * <li>Otherwise it is in the air: it keeps its down while the block it is in allows it,
+     * and takes the zone's down when it doesn't.</li>
+     * </ol>
+     *
+     * Around floating gateway planets it turns smoothly with the planet instead.
      */
     private static Vec3 upFor(LivingEntity entity, GravityWorld world, GravityFrame frame) {
-        frame.updateGround(entity.onGround());
+        int offGround = frame.updateGround(entity.onGround());
         if (inOpenSpace(entity, world)) {
             // Between planets: keep whatever way you're turned (see SpaceFlightClient).
             frame.setStepUp(null);
@@ -279,15 +289,116 @@ public final class GravityFrames {
         }
         GravityField field = pull.get().field();
         Direction current = frame.stepUp() != null ? frame.stepUp() : field.zoneUp(entity.position());
-        // The block at your feet decides (a hair up from them, so standing on a block's top
-        // counts as the block you stand in, not the one below).
-        Vec3 feet = entity.position().add(current.getUnitVec3().scale(0.05));
-        Direction zone = field.blockUp(BlockPos.containing(feet), current);
+        Direction zone = floorUp(entity, frame, field, current, offGround);
         if (zone == current.getOpposite()) {
             StuckSafety.middleCrossing(entity, frame, field, zone);
         }
         frame.setStepUp(zone);
         return zone.getUnitVec3();
+    }
+
+    /** Ticks after a turn onto another face before a wall can take you again. */
+    private static final int WALL_STEP_COOLDOWN = 10;
+    /** Ticks after leaving the ground during which a floor face at your side still catches you. */
+    private static final int EDGE_CATCH_TICKS = 4;
+
+    /** The rules of {@link #upFor} on a planet: which floor the entity stands on. */
+    static Direction floorUp(LivingEntity entity, GravityFrame frame, GravityField field, Direction current,
+            int offGround) {
+        AABB box = entity.getBoundingBox();
+        Level level = entity.level();
+        if (touchesFloor(level, field, box, current, current, false)) {
+            if (frame.ticksSinceBoxTurn() >= WALL_STEP_COOLDOWN) {
+                Vec3 facing = facing(entity, frame);
+                for (Direction wall : Direction.values()) {
+                    if (wall.getAxis() != current.getAxis() && facing.dot(wall.getUnitVec3()) < -0.7
+                            && touchesFloor(level, field, box, wall, current, true)) {
+                        return wall;
+                    }
+                }
+            }
+            return current;
+        }
+        Vec3 motion = entity.getDeltaMovement();
+        boolean jumping = motion.dot(current.getUnitVec3()) > 0.05;
+        if (offGround <= EDGE_CATCH_TICKS && !jumping) {
+            for (Direction side : Direction.values()) {
+                if (side.getAxis() != current.getAxis() && touchesFloor(level, field, box, side, current, false)) {
+                    return side;
+                }
+            }
+        }
+        // In the air: the block at your feet decides (a hair up from them, so standing on a
+        // block's top counts as the block you stand in, not the one below).
+        Vec3 feet = entity.position().add(current.getUnitVec3().scale(0.05));
+        return field.blockUp(BlockPos.containing(feet), current);
+    }
+
+    /** How close a block face must be to the hitbox to count as touching it, in blocks. */
+    private static final double TOUCH = 0.06;
+
+    /**
+     * True if a solid block touches the hitbox on its {@code -up} side, with that face being
+     * floor for {@code up}. With {@code fullHeight}, the touching blocks must cover both the
+     * lower and the upper part of the hitbox along {@code bodyUp} (a wall as tall as you).
+     */
+    static boolean touchesFloor(Level level, GravityField field, AABB box, Direction up, Direction bodyUp,
+            boolean fullHeight) {
+        if (!fullHeight) {
+            return touchesFloorIn(level, field, slab(box, up), up);
+        }
+        Direction.Axis along = bodyUp.getAxis();
+        double min = box.min(along);
+        double max = box.max(along);
+        double third = (max - min) / 3.0;
+        return touchesFloorIn(level, field, slab(clip(box, along, min, min + third), up), up)
+                && touchesFloorIn(level, field, slab(clip(box, along, max - third, max), up), up);
+    }
+
+    /** A thin box just outside the hitbox on its {@code -up} side, a bit narrower than it. */
+    private static AABB slab(AABB box, Direction up) {
+        double inset = 0.02;
+        double[] min = {box.minX + inset, box.minY + inset, box.minZ + inset};
+        double[] max = {box.maxX - inset, box.maxY - inset, box.maxZ - inset};
+        int i = up.getAxis().ordinal();
+        if (up.getAxisDirection() == Direction.AxisDirection.POSITIVE) {
+            max[i] = box.min(up.getAxis());
+            min[i] = max[i] - TOUCH;
+        } else {
+            min[i] = box.max(up.getAxis());
+            max[i] = min[i] + TOUCH;
+        }
+        return new AABB(min[0], min[1], min[2], max[0], max[1], max[2]);
+    }
+
+    private static AABB clip(AABB box, Direction.Axis axis, double from, double to) {
+        return switch (axis) {
+            case X -> new AABB(from, box.minY, box.minZ, to, box.maxY, box.maxZ);
+            case Y -> new AABB(box.minX, from, box.minZ, box.maxX, to, box.maxZ);
+            case Z -> new AABB(box.minX, box.minY, from, box.maxX, box.maxY, to);
+        };
+    }
+
+    private static boolean touchesFloorIn(Level level, GravityField field, AABB slab, Direction up) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int x = (int) Math.floor(slab.minX); x <= (int) Math.floor(slab.maxX); x++) {
+            for (int y = (int) Math.floor(slab.minY); y <= (int) Math.floor(slab.maxY); y++) {
+                for (int z = (int) Math.floor(slab.minZ); z <= (int) Math.floor(slab.maxZ); z++) {
+                    cursor.set(x, y, z);
+                    BlockState state = level.getBlockState(cursor);
+                    var shape = state.getCollisionShape(level, cursor);
+                    if (shape.isEmpty() || !field.blockUps(cursor).contains(up)) {
+                        continue;
+                    }
+                    for (AABB part : shape.toAabbs()) {
+                        if (part.move(cursor).intersects(slab)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /** The way the entity faces, flat in its own frame, in world space. */
