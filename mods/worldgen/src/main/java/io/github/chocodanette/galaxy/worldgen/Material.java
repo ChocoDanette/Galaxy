@@ -11,8 +11,6 @@ public enum Material {
     TOP, SIDE, SOIL, STONE, DEEP, CORE,
     /** A light block, like the little sun in the middle of a hollow planet. */
     GLOW,
-    /** Seam stone: where two gravity zones meet. */
-    SEAM,
     COAL(Ore.COAL, false), IRON(Ore.IRON, false), COPPER(Ore.COPPER, false), GOLD(Ore.GOLD, false),
     REDSTONE(Ore.REDSTONE, false), LAPIS(Ore.LAPIS, false), DIAMOND(Ore.DIAMOND, false),
     DEEP_COAL(Ore.COAL, true), DEEP_IRON(Ore.IRON, true), DEEP_COPPER(Ore.COPPER, true), DEEP_GOLD(Ore.GOLD, true),

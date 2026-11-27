@@ -159,7 +159,7 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
                 if (Hashing.unit(seed ^ 0x3C6EF372FE94F82BL, x, y, z) < HOLLOW_GLOW_CHANCE) {
                     return Material.GLOW;
                 }
-                return seamOr(x, y, z, theme.topFalls() ? Material.SIDE : Material.TOP);
+                return theme.topFalls() ? Material.SIDE : Material.TOP;
             }
             onTop = depth == outerDepth && dy > 0 && ay >= ax && ay >= az;
             inner = Math.min(1.0, depth / (GravityField.hollowShellThickness(radius) / 2.0));
@@ -196,16 +196,16 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             return null;
         }
         if (depth < 1.0) {
-            return seamOr(x, y, z, onTop ? Material.TOP : Material.SIDE);
+            return onTop ? Material.TOP : Material.SIDE;
         }
         if (depth < soilDepth) {
-            return seamOr(x, y, z, Material.SOIL);
+            return Material.SOIL;
         }
 
         // 0 just under the soil, 1 at the very center.
         Material rock = inner > 0.7 ? Material.CORE : inner > 0.4 ? Material.DEEP : Material.STONE;
         Material.Ore ore = oreAt(x, y, z, inner);
-        return seamOr(x, y, z, ore == null ? rock : Material.ore(ore, rock != Material.STONE));
+        return ore == null ? rock : Material.ore(ore, rock != Material.STONE);
     }
 
     /** True inside one of a hollow planet's doors: a square hole through the middle of each face. */
@@ -218,25 +218,6 @@ public record Planet(long seed, Vec3 center, double radius, GravityField.Shape s
             return ax < door && az < door;
         }
         return ax < door && ay < door;
-    }
-
-    /**
-     * Seam stone where two gravity zones meet, so players can see where down changes, on the
-     * surface and underground. A block is on a seam when the block next to it (east, above or
-     * south) is in another zone. Gateway planets have no zones.
-     */
-    private Material seamOr(int x, int y, int z, Material material) {
-        if (isGateway()) {
-            return material;
-        }
-        GravityField field = gravityField();
-        Direction here = field.zoneUp(new Vec3(x + 0.5, y + 0.5, z + 0.5));
-        if (field.zoneUp(new Vec3(x + 1.5, y + 0.5, z + 0.5)) != here
-                || field.zoneUp(new Vec3(x + 0.5, y + 1.5, z + 0.5)) != here
-                || field.zoneUp(new Vec3(x + 0.5, y + 0.5, z + 1.5)) != here) {
-            return Material.SEAM;
-        }
-        return material;
     }
 
     private static double clamp(double value, double limit) {

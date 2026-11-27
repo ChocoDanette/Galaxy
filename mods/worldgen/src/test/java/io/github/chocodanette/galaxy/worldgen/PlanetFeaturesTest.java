@@ -131,7 +131,7 @@ class PlanetFeaturesTest {
         // The inner ground is grassy, and gravity there points out into it.
         int floor = (int) Math.floor(CENTER.x + inner);
         Material ground = hollow.materialAt(floor, 100, 6);
-        assertTrue(ground == Material.TOP || ground == Material.GLOW || ground == Material.SEAM, "inner ground is " + ground);
+        assertTrue(ground == Material.TOP || ground == Material.GLOW, "inner ground is " + ground);
         Vec3 down = GravityMath.downDirection(List.of(hollow.gravityField()), new Vec3(floor - 1.5, 100.5, 6.5));
         assertTrue(down.x > 0.95, "inside, down should point out to the ground: " + down);
         assertEquals(Direction.WEST, hollow.upAt(floor - 1, 100, 6));
@@ -163,8 +163,7 @@ class PlanetFeaturesTest {
         assertNull(disc.materialAt(3, top + 1, 2));
         assertNull(disc.materialAt(18, 100, 0));
         assertEquals(Direction.DOWN, disc.upAt(3, (int) Math.floor(CENTER.y - half) - 1, 2));
-        // Its middle plane is seam stone: down flips there.
-        assertEquals(Material.SEAM, disc.materialAt(3, 99, 2));
+        assertNotNull(disc.materialAt(3, 99, 2));
     }
 
     @Test

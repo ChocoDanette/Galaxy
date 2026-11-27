@@ -29,14 +29,6 @@ public final class PlanetBlocks {
     public static final DeferredBlock<Block> FUNGAL_TURF = BLOCKS.registerSimpleBlock("fungal_turf",
             props -> props.mapColor(MapColor.COLOR_PURPLE).strength(0.6F).sound(SoundType.GRASS));
 
-    /**
-     * Marks where two gravity zones of a planet meet (see the Gravity mod's zones): down
-     * changes when you cross it. Glows a little, so you can follow it underground too.
-     */
-    public static final DeferredBlock<Block> SEAM_STONE = BLOCKS.registerSimpleBlock("seam_stone",
-            props -> props.mapColor(MapColor.COLOR_CYAN).strength(1.5F, 6.0F).requiresCorrectToolForDrops()
-                    .lightLevel(state -> 6).sound(SoundType.CALCITE));
-
     public static final DeferredBlock<PlanetPlantBlock> PLANET_GRASS = BLOCKS.registerBlock("planet_grass",
             PlanetPlantBlock::new, PlanetBlocks::plant);
     public static final DeferredBlock<PlanetPlantBlock> STARBLOOM = BLOCKS.registerBlock("starbloom",
@@ -71,7 +63,6 @@ public final class PlanetBlocks {
         ITEMS.registerSimpleBlockItem(HOMEWARD_PETAL);
         ITEMS.registerSimpleBlockItem(HOMEWARD_CORE);
         ITEMS.registerSimpleBlockItem(PLANET_TURF);
-        ITEMS.registerSimpleBlockItem(SEAM_STONE);
         ITEMS.registerSimpleBlockItem(FUNGAL_TURF);
         ITEMS.registerSimpleBlockItem(PLANET_GRASS);
         ITEMS.registerSimpleBlockItem(STARBLOOM);
@@ -119,7 +110,6 @@ public final class PlanetBlocks {
         if (event.getTabKey() == CreativeModeTabs.NATURAL_BLOCKS) {
             event.accept(PLANET_TURF.get());
             event.accept(FUNGAL_TURF.get());
-            event.accept(SEAM_STONE.get());
             event.accept(PLANET_GRASS.get());
             event.accept(STARBLOOM.get());
             event.accept(BLOOM_STEM.get());

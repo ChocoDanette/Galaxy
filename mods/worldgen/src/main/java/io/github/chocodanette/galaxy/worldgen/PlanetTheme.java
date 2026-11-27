@@ -140,7 +140,6 @@ public enum PlanetTheme {
             case DEEP -> deep.get();
             case CORE -> core.get();
             case GLOW -> Blocks.SHROOMLIGHT;
-            case SEAM -> PlanetBlocks.SEAM_STONE.get();
             default -> material.ore().block(material.isDeepOre());
         };
     }
