@@ -212,32 +212,22 @@ public final class GravityFrames {
         return false;
     }
 
-    /** How far under a planet's surface you count as underground, in blocks. */
-    private static final double UNDERGROUND_DEPTH = 1.0;
-    /** How far above your head we look for a cave roof, in blocks. */
-    private static final int ROOF_SEARCH = 16;
+    /**
+     * How far inside a planet's shape (blocks) you count as underground. The shape is the
+     * planet's base outline ({@link GravityField#distanceToSurface}), which hills and dips
+     * leave out: they reach up to about 3 blocks either side of it, so this is deeper than
+     * the deepest dip and walking on the surface never counts.
+     */
+    private static final double UNDERGROUND_DEPTH = 3.0;
 
     /**
-     * True in a cave: under the planet's surface with rock above your head. Hollow planets
-     * don't count (their tunnels and insides have their own gravity, which must turn).
+     * True when inside a planet's shape: down then stays what it was when you went in, however
+     * you dig or wherever the tunnel goes. No roof check: an open pit counts too. Hollow and
+     * floating planets don't count (their gravity must turn).
      */
     private static boolean underground(LivingEntity entity, GravityFrame frame, GravityField field) {
-        if (field.shape() == GravityField.Shape.HOLLOW || field.floats()
-                || field.distanceToSurface(entity.position()) > -UNDERGROUND_DEPTH) {
-            return false;
-        }
-        Vec3 up = frame.up();
-        Vec3 head = entity.position().add(up.scale(entity.getBbHeight()));
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        Level level = entity.level();
-        for (int i = 0; i < ROOF_SEARCH; i++) {
-            Vec3 at = head.add(up.scale(i));
-            cursor.set(Math.floor(at.x), Math.floor(at.y), Math.floor(at.z));
-            if (!level.getBlockState(cursor).getCollisionShape(level, cursor).isEmpty()) {
-                return true;
-            }
-        }
-        return false;
+        return field.shape() != GravityField.Shape.HOLLOW && !field.floats()
+                && field.distanceToSurface(entity.position()) <= -UNDERGROUND_DEPTH;
     }
 
     /** Ticks after leaving the ground during which "up" still follows the ground. */
