@@ -3,7 +3,6 @@ package io.github.chocodanette.galaxy.gravity;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.core.Direction;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.StringRepresentable;
@@ -105,262 +104,129 @@ public record GravityField(Vec3 center, double radius, double range, double stre
         return pos.distanceToSqr(center) <= range * range;
     }
 
-    // ------------------------------------------------------------------ zone gravity
-    //
-    // Every planet is split into zones, and each zone has one "down" along a block direction.
-    // The planet's core decides it for every block: a block inside one zone has that zone's
-    // down, and a block the border between zones runs through has both downs. Players, mobs,
-    // items, sand and water all follow the block they are in. Inside a zone the planet plays
-    // like normal Minecraft: body, hitbox, blocks and mobs all line up.
-
     /**
-     * How far past a zone border you must go before down switches back the way you came, in
-     * blocks, so standing right on a border never flickers.
+     * The point that gravity pulls toward: the center for a sphere. For a cube it is the
+     * closest point of a smaller cube inside it, so on a face you're pulled straight into
+     * the face, and only near an edge does the pull turn over the edge. A hollow planet works
+     * the same way with a thinner copy of its shell (see {@link #hollowPullPoint}).
      */
-    public static final double ZONE_BUFFER = 1.0;
-
-    /** The zone's "up" at a position, with no memory of the zone you were in. */
-    public Direction zoneUp(Vec3 pos) {
-        return zoneUp(pos, null);
-    }
-
-    /**
-     * The zone's "up" at a position. Each zone scores how far the position is into it; the
-     * best one wins, but the zone you are already in ({@code current}) keeps winning until
-     * another is ahead by more than {@link #ZONE_BUFFER}.
-     *
-     * <ul>
-     * <li>Cubes, rounded cubes and round planets: six zones, split along the diagonals from
-     * the center, so each face (or each sixth of a ball) has one down, into the planet.</li>
-     * <li>Hollow planets (hollow cubes): six outer zones like a cube, and six inner zones
-     * where down points out onto the inside walls. The middle of the shell is the border.</li>
-     * <li>Donuts: a square ring around world y. Each side of its tube (top, bottom, outer
-     * wall, inner wall) is a zone with down into the tube.</li>
-     * <li>Discs: a flat round slab across world y. The top pulls down, the bottom pulls up,
-     * and the rim wall pulls inward (along the nearest of four directions).</li>
-     * </ul>
-     */
-    public Direction zoneUp(Vec3 pos, Direction current) {
-        double[] score = zoneScores(pos, current);
-        // Up wins ties (right at the middle), so you start the right way up.
-        Direction best = Direction.UP;
-        double bestScore = score[Direction.UP.ordinal()];
-        for (Direction dir : Direction.values()) {
-            if (score[dir.ordinal()] > bestScore) {
-                bestScore = score[dir.ordinal()];
-                best = dir;
-            }
+    public Vec3 pullPoint(Vec3 pos) {
+        if (shape == Shape.SPHERE) {
+            return center;
         }
-        if (current != null && current != best && score[current.ordinal()] >= bestScore - ZONE_BUFFER) {
-            return current;
+        if (shape == Shape.HOLLOW) {
+            return hollowPullPoint(pos);
         }
-        return best;
-    }
-
-    /** How far a position is into each zone (indexed by {@link Direction#ordinal()}). */
-    private double[] zoneScores(Vec3 pos, Direction current) {
-        double dx = pos.x - center.x;
-        double dy = pos.y - center.y;
-        double dz = pos.z - center.z;
-        double[] score = new double[6];
-        java.util.Arrays.fill(score, Double.NEGATIVE_INFINITY);
-        switch (shape) {
-            case HOLLOW -> {
-                double cheb = Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
-                double middle = radius - hollowShellThickness(radius) / 2.0;
-                // Outside the middle of the shell: like a cube. Inside: the same zones, flipped.
-                double side = cheb - middle;
-                double sign = side >= 0 ? 1.0 : -1.0;
-                if (current != null && Math.abs(side) < ZONE_BUFFER) {
-                    // Near the middle of the shell, stay on the side you were on.
-                    sign = facesOut(current, dx, dy, dz) ? 1.0 : -1.0;
-                }
-                boxScores(score, dx, dy, dz, sign);
-            }
-            case DONUT -> {
-                // Seen across the tube, its four sides split along the tube's diagonals: the
-                // top and bottom score how far up or down you are, the outer and inner walls
-                // how far out or in from the tube's middle line.
-                double middle = radius - donutTube(radius);
-                score[Direction.UP.ordinal()] = dy;
-                score[Direction.DOWN.ordinal()] = -dy;
-                double ax = Math.abs(dx);
-                double az = Math.abs(dz);
-                double u = Math.max(ax, az) - middle;
-                // The walls belong to the side of the square ring you're on (x or z); the
-                // other side's walls only come close near the ring's corners.
-                Direction xOut = dx >= 0 ? Direction.EAST : Direction.WEST;
-                Direction zOut = dz >= 0 ? Direction.SOUTH : Direction.NORTH;
-                Direction mine = ax >= az ? xOut : zOut;
-                Direction other = ax >= az ? zOut : xOut;
-                double corner = Math.abs(ax - az);
-                score[mine.ordinal()] = u;
-                score[mine.getOpposite().ordinal()] = -u;
-                score[other.ordinal()] = u - corner;
-                score[other.getOpposite().ordinal()] = -u - corner;
-            }
-            case DISC -> {
-                // Top pulls down, bottom pulls up, and past the rim the rim wall takes over:
-                // the border is where you are as far out past the rim as above the top.
-                double flat = Math.sqrt(dx * dx + dz * dz);
-                double rimScore = flat - radius + discHalfThickness(radius);
-                score[Direction.UP.ordinal()] = dy;
-                score[Direction.DOWN.ordinal()] = -dy;
-                double ax = Math.abs(dx);
-                double az = Math.abs(dz);
-                Direction xOut = dx >= 0 ? Direction.EAST : Direction.WEST;
-                Direction zOut = dz >= 0 ? Direction.SOUTH : Direction.NORTH;
-                // The rim faces along the nearest of four directions.
-                score[xOut.ordinal()] = rimScore - Math.max(0.0, az - ax);
-                score[zOut.ordinal()] = rimScore - Math.max(0.0, ax - az);
-            }
-            default -> boxScores(score, dx, dy, dz, 1.0);
-        }
-        return score;
-    }
-
-    /** Cube zones: each face scores how far out the position is along it ({@code sign} -1 flips them). */
-    private static void boxScores(double[] score, double dx, double dy, double dz, double sign) {
-        score[Direction.EAST.ordinal()] = dx * sign;
-        score[Direction.WEST.ordinal()] = -dx * sign;
-        score[Direction.UP.ordinal()] = dy * sign;
-        score[Direction.DOWN.ordinal()] = -dy * sign;
-        score[Direction.SOUTH.ordinal()] = dz * sign;
-        score[Direction.NORTH.ordinal()] = -dz * sign;
-    }
-
-    /** True if "up" along this direction points away from the center at this offset. */
-    private static boolean facesOut(Direction up, double dx, double dy, double dz) {
-        return up.getStepX() * dx + up.getStepY() * dy + up.getStepZ() * dz >= 0;
-    }
-
-    /**
-     * The face change line: a block has the next zone's floor too when some part of it is
-     * at least this far into that zone compared with its own (1/0.8 in Lucas's drawing).
-     * Blocks from the diagonal to that line, and blocks the line goes through, have two
-     * floor faces (three at a cube's corners).
-     */
-    public static final double FACE_CHANGE_RATIO = 0.8;
-
-    /**
-     * The faces of a block that count as floor, given as the "up" an entity standing on that
-     * face would have. Only floor faces hold an entity's down: walk past the edge of a block
-     * whose front face is not floor and you fall.
-     */
-    public java.util.EnumSet<Direction> blockUps(net.minecraft.core.BlockPos pos) {
-        java.util.EnumSet<Direction> ups = java.util.EnumSet.noneOf(Direction.class);
-        ups.add(zoneUp(Vec3.atCenterOf(pos)));
-        // The ratio between two zones is most extreme at the block's corners.
-        for (int i = 0; i < 8; i++) {
-            double[] score = zoneScores(new Vec3(pos.getX() + (i & 1), pos.getY() + ((i >> 1) & 1),
-                    pos.getZ() + ((i >> 2) & 1)), null);
-            double best = Double.NEGATIVE_INFINITY;
-            for (double value : score) {
-                best = Math.max(best, value);
-            }
-            if (best <= 0) {
-                continue;
-            }
-            for (Direction dir : Direction.values()) {
-                if (score[dir.ordinal()] >= best * FACE_CHANGE_RATIO) {
-                    ups.add(dir);
-                }
-            }
-        }
-        return ups;
-    }
-
-    /**
-     * The "up" for something in this block that had {@code current} before: it keeps
-     * {@code current} while the block allows it, and otherwise takes the zone of the block's
-     * middle.
-     */
-    public Direction blockUp(net.minecraft.core.BlockPos pos, Direction current) {
-        if (current != null && blockUps(pos).contains(current)) {
-            return current;
-        }
-        return zoneUp(Vec3.atCenterOf(pos));
-    }
-
-    /** Unit vector "down" for the zone at a position (no memory of the previous zone). */
-    public Vec3 zoneDown(Vec3 pos) {
-        return zoneUp(pos).getOpposite().getUnitVec3();
+        double core = coreHalfSize();
+        return new Vec3(
+                clamp(pos.x, center.x - core, center.x + core),
+                clamp(pos.y, center.y - core, center.y + core),
+                clamp(pos.z, center.z - core, center.z + core));
     }
 
     /** Distance from the position to the planet's surface (negative when inside the planet). */
     public double distanceToSurface(Vec3 pos) {
-        double dx = pos.x - center.x;
-        double dy = pos.y - center.y;
-        double dz = pos.z - center.z;
-        return switch (shape) {
-            case SPHERE -> pos.distanceTo(center) - radius;
-            case CUBE -> cheb(dx, dy, dz) - radius;
-            case ROUNDED_CUBE -> {
-                double core = Math.max(0.0, radius - roundedBevel(radius));
-                double ex = dx - clamp(dx, -core, core);
-                double ey = dy - clamp(dy, -core, core);
-                double ez = dz - clamp(dz, -core, core);
-                yield Math.sqrt(ex * ex + ey * ey + ez * ez) - (radius - core);
-            }
-            case HOLLOW -> {
-                double cheb = cheb(dx, dy, dz);
-                yield Math.max(cheb - radius, (radius - hollowShellThickness(radius)) - cheb);
-            }
-            case DONUT -> {
-                double tube = donutTube(radius);
-                double u = Math.max(Math.abs(dx), Math.abs(dz)) - (radius - tube);
-                yield Math.max(Math.abs(u), Math.abs(dy)) - tube;
-            }
-            case DISC -> Math.max(Math.sqrt(dx * dx + dz * dz) - radius, Math.abs(dy) - discHalfThickness(radius));
-        };
+        if (shape == Shape.SPHERE) {
+            return pos.distanceTo(center) - radius;
+        }
+        if (shape == Shape.HOLLOW) {
+            return pos.distanceTo(pullPoint(pos)) - CUBE_EDGE_ROUNDING;
+        }
+        return pos.distanceTo(pullPoint(pos)) - (radius - coreHalfSize());
     }
 
-    /**
-     * How far into the planet's middle a position is, where zones on opposite sides meet, in
-     * blocks: 0 right at the middle. Used for the push that carries you out of the middle.
-     */
-    public double distanceToMiddle(Vec3 pos) {
-        double dx = pos.x - center.x;
-        double dy = pos.y - center.y;
-        double dz = pos.z - center.z;
-        return switch (shape) {
-            case HOLLOW -> Math.abs(cheb(dx, dy, dz) - (radius - hollowShellThickness(radius) / 2.0));
-            case DONUT -> {
-                double u = Math.max(Math.abs(dx), Math.abs(dz)) - (radius - donutTube(radius));
-                yield Math.max(Math.abs(u), Math.abs(dy));
-            }
-            case DISC -> Math.sqrt(dx * dx + dz * dz) <= radius ? Math.abs(dy) : Double.MAX_VALUE;
-            default -> cheb(dx, dy, dz);
-        };
-    }
-
-    private static double cheb(double dx, double dy, double dz) {
-        return Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
-    }
-
-    /** How thick the shell of a hollow planet of this half size is, in blocks. */
+    /** How thick the shell of a hollow planet of this radius is, in blocks. */
     public static double hollowShellThickness(double radius) {
         return Math.max(5.0, Math.min(7.0, Math.round(radius * 0.25)));
     }
 
-    /** Half the side of the square doors through the middle of each face of a hollow planet. */
-    public static double hollowDoorHalf(double radius) {
-        return 1.5;
+    /** How wide the tunnels through a hollow planet's poles are (from the middle to the wall). */
+    public static double hollowTunnelRadius(double radius) {
+        return Math.max(3.0, Math.min(4.0, Math.round(radius * 0.15)));
     }
 
-    /** For a hollow planet, half the side of the open space inside its shell. */
+    /** For a hollow planet, the radius of the open space inside its shell. */
     public double innerRadius() {
         return shape == Shape.HOLLOW ? radius - hollowShellThickness(radius) : 0.0;
     }
 
-    /** Half the thickness of a donut's square tube; {@code radius} is half the whole ring's width. */
-    public static double donutTube(double radius) {
-        return Math.max(3.0, Math.min(8.0, Math.round(radius * 0.3)));
+    /**
+     * A hollow planet is a shell with a big open space inside and a tunnel through its top and
+     * bottom (along world y). Its gravity pulls toward the closest point of a thinner copy of
+     * that shell, the same trick cubes use for their edges. Outside, that points to the
+     * center. Inside, it points out to the inner ground, so you walk on the inside. In a
+     * tunnel it points to the tunnel wall, and at the tunnel's ends it bends smoothly around
+     * the rim, so you can walk from the outside, through the tunnel, onto the inside.
+     *
+     * The math happens on a flat slice through the poles: s is the height along the tunnel
+     * and w the distance from the tunnel's middle line. The thin shell on that slice is a
+     * ring between two circles with a strip cut out near the line.
+     */
+    private Vec3 hollowPullPoint(Vec3 pos) {
+        double rounding = CUBE_EDGE_ROUNDING;
+        double outer = radius - rounding;
+        double inner = innerRadius() + rounding;
+        double wall = hollowTunnelRadius(radius) + rounding;
+        double rx = pos.x - center.x;
+        double ry = pos.y - center.y;
+        double rz = pos.z - center.z;
+        double s = ry;
+        double w = Math.sqrt(rx * rx + rz * rz);
+        double ux = 1.0;
+        double uz = 0.0;
+        if (w > 1.0E-6) {
+            ux = rx / w;
+            uz = rz / w;
+        }
+        double norm = Math.sqrt(s * s + w * w);
+        if (w >= wall && norm >= inner && norm <= outer) {
+            return pos;
+        }
+
+        double bestS = 0.0;
+        double bestW = 0.0;
+        double best = Double.MAX_VALUE;
+        // Straight out to the outer circle, or in to the inner circle, when that lands on the shell.
+        for (double ring : new double[] {outer, inner}) {
+            double cs;
+            double cw;
+            if (norm > 1.0E-6) {
+                cs = s / norm * ring;
+                cw = w / norm * ring;
+            } else {
+                cs = 0.0;
+                cw = ring;
+            }
+            if (cw >= wall) {
+                double d = sq(cs - s) + sq(cw - w);
+                if (d < best) {
+                    best = d;
+                    bestS = cs;
+                    bestW = cw;
+                }
+            }
+        }
+        // Across to the tunnel wall, stopping at the rim where it meets either circle.
+        double low = Math.sqrt(Math.max(0.0, inner * inner - wall * wall));
+        double high = Math.sqrt(Math.max(0.0, outer * outer - wall * wall));
+        double side = s >= 0 ? 1.0 : -1.0;
+        double cs = side * clamp(Math.abs(s), low, high);
+        double d = sq(cs - s) + sq(wall - w);
+        if (d < best) {
+            bestS = cs;
+            bestW = wall;
+        }
+        return new Vec3(center.x + ux * bestW, center.y + bestS, center.z + uz * bestW);
     }
 
-    /** Half the thickness of a disc planet; {@code radius} is the disc's radius. */
-    public static double discHalfThickness(double radius) {
-        return Math.max(3.0, Math.min(7.0, Math.round(radius * 0.25)));
+    private static double sq(double value) {
+        return value * value;
+    }
+
+    private double coreHalfSize() {
+        return shape == Shape.ROUNDED_CUBE
+                ? Math.max(0.0, radius - roundedBevel(radius))
+                : Math.max(0.0, radius - CUBE_EDGE_ROUNDING);
     }
 
     /**
@@ -378,17 +244,13 @@ public record GravityField(Vec3 center, double radius, double range, double stre
     public enum Shape implements StringRepresentable {
         SPHERE("sphere"),
         CUBE("cube"),
-        /** A hollow cube you can walk on outside and inside, with a door through each face. */
+        /** A round shell you can walk on outside and inside, with a tunnel through its poles. */
         HOLLOW("hollow"),
         /**
          * A cube with wide rounded edges. On each face down points straight into the face, so
          * blocks and gravity line up like in the overworld; it only turns on the rounded edges.
          */
-        ROUNDED_CUBE("rounded_cube"),
-        /** A square ring around world y, with a hole through the middle. */
-        DONUT("donut"),
-        /** A flat round slab across world y: walk on its top, its bottom and its rim. */
-        DISC("disc");
+        ROUNDED_CUBE("rounded_cube");
 
         public static final Codec<Shape> CODEC = StringRepresentable.fromEnum(Shape::values);
         public static final StreamCodec<ByteBuf, Shape> STREAM_CODEC =

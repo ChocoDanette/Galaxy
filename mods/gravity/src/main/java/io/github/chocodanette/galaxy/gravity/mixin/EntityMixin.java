@@ -119,8 +119,7 @@ public abstract class EntityMixin {
     private void galaxy$eyePosition(CallbackInfoReturnable<Vec3> cir) {
         GravityFrame frame = GravityFrames.tilted(galaxy$self());
         if (frame != null) {
-            cir.setReturnValue(GravityFrames.safeEyes(galaxy$self(), position(), frame.up(),
-                    GravityFrames.boxAxis(frame), getEyeHeight()));
+            cir.setReturnValue(position().add(frame.up().scale(getEyeHeight())));
         }
     }
 
@@ -132,37 +131,8 @@ public abstract class EntityMixin {
                     Mth.lerp(partialTick, xo, position().x),
                     Mth.lerp(partialTick, yo, position().y),
                     Mth.lerp(partialTick, zo, position().z));
-            cir.setReturnValue(GravityFrames.safeEyes(galaxy$self(), feet, frame.up(partialTick),
-                    GravityFrames.boxAxis(frame), getEyeHeight()));
+            cir.setReturnValue(feet.add(frame.up(partialTick).scale(getEyeHeight())));
         }
-    }
-
-    /**
-     * Vanilla checks for suffocation with a thin flat slab at the eyes, flat in world x and z.
-     * On a planet's side that slab stands up along your "up" and can poke out above your head
-     * into a low ceiling (crouching under a block on a wall hurt you). Lay it flat across the
-     * hitbox's own axis instead.
-     */
-    @Inject(method = "isInWall", at = @At("HEAD"), cancellable = true)
-    private void galaxy$inWallAlongFrame(CallbackInfoReturnable<Boolean> cir) {
-        Entity self = galaxy$self();
-        GravityFrame frame = GravityFrames.tilted(self);
-        if (frame == null || dimensions == null || self.noPhysics) {
-            return;
-        }
-        Direction.Axis axis = GravityFrames.boxAxis(frame).getAxis();
-        double w = dimensions.width() * 0.8;
-        AABB eyes = AABB.ofSize(self.getEyePosition(), axis == Direction.Axis.X ? 1.0E-6 : w,
-                axis == Direction.Axis.Y ? 1.0E-6 : w, axis == Direction.Axis.Z ? 1.0E-6 : w);
-        Level level = self.level();
-        cir.setReturnValue(BlockPos.betweenClosedStream(eyes).anyMatch(pos -> {
-            BlockState state = level.getBlockState(pos);
-            return !state.isAir() && state.isSuffocating(level, pos)
-                    && net.minecraft.world.phys.shapes.Shapes.joinIsNotEmpty(
-                            state.getCollisionShape(level, pos).move(pos),
-                            net.minecraft.world.phys.shapes.Shapes.create(eyes),
-                            net.minecraft.world.phys.shapes.BooleanOp.AND);
-        }));
     }
 
     /**
@@ -252,7 +222,8 @@ public abstract class EntityMixin {
             return;
         }
         GravityMath.Pull itemPull = pull.get();
-        if (self.onGround() && itemPull.inField()) {
+        if ((self.onGround() || world.mode() == io.github.chocodanette.galaxy.gravity.GravityMode.STEPS)
+                && itemPull.inField()) {
             // Resting on a block (or always, in step gravity), pull straight into a block face. Near a cube's
             // edge the true pull is slanted, and its sideways part would slide the item off
             // the block and down the side (players get the same fix in GravityApplier).

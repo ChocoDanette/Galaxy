@@ -54,7 +54,7 @@ class GalaxyLayoutTest {
             smallest = Math.min(smallest, p.radius());
             biggest = Math.max(biggest, p.radius());
         }
-        assertEquals(EnumSet.allOf(GravityField.Shape.class), shapes);
+        assertEquals(EnumSet.of(GravityField.Shape.ROUNDED_CUBE, GravityField.Shape.CUBE, GravityField.Shape.HOLLOW), shapes);
         assertTrue(themes.size() >= 4, "themes: " + themes);
         assertTrue(biggest > smallest * 2, "sizes " + smallest + " to " + biggest);
     }
@@ -116,7 +116,8 @@ class GalaxyLayoutTest {
         assertEquals(Material.SOIL, planet.materialAt(0, 113, 0));
         assertNull(planet.materialAt(0, 116, 0));
         assertNull(planet.materialAt(11, 111, 0));
-        assertNotNull(planet.materialAt(0, 100, 0));
+        Material center = planet.materialAt(0, 100, 0);
+        assertTrue(center == Material.CORE || center.ore() != null, "center is " + center);
         assertEquals(115, planet.topY(0, 0));
     }
 
@@ -127,8 +128,8 @@ class GalaxyLayoutTest {
         for (int x = -6; x <= 6; x++) {
             for (int z = -6; z <= 6; z++) {
                 assertEquals(106, cube.topY(x, z));
-                assertEquals(Material.TOP, cube.materialAt(x, 106, z), "top " + x + " " + z);
-                assertEquals(Material.SIDE, cube.materialAt(x, 94, z), "bottom " + x + " " + z);
+                assertEquals(Material.TOP, cube.materialAt(x, 106, z));
+                assertEquals(Material.SIDE, cube.materialAt(x, 94, z));
             }
         }
         assertNull(cube.materialAt(7, 100, 0));

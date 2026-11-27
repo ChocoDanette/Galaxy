@@ -131,12 +131,9 @@ public final class GravityFrames {
         org.joml.Quaternionf before = frame.currentRotation();
         frame.tick(up, facing(entity, frame));
         if (boxAxis(frame) != axisBefore && !hasRoomToTurn(entity, boxAxis(frame))) {
-            // Turning now would push the hitbox into rock: wait until there's room. Gravity
-            // waits too, or it would pull the body sideways into the wall it can't turn from.
+            // Turning now would push the hitbox into rock: wait until there's room.
             frame.undoTurn();
-            frame.setGravityDown(frame.up().scale(-1));
         }
-        frame.noteBoxTurn(boxAxis(frame) != axisBefore);
         if (!before.equals(frame.currentRotation(), 1.0E-6F) && KEEPS_LOOK.test(entity)) {
             keepLook(entity, before, frame.currentRotation());
         }
@@ -149,44 +146,6 @@ public final class GravityFrames {
             // Vanilla measures falls along world "down", which is wrong on a planet's side.
             entity.resetFallDistance();
         }
-        if (!world.fields().isEmpty()) {
-            StuckSafety.tick(entity, frame);
-        }
-    }
-
-    /**
-     * Where the eyes are, given the smooth "up". The view leans smoothly on a curve but the
-     * hitbox stays straight along a block axis, so in a narrow tunnel the leaning eyes can end
-     * up inside the rock beside the body: you'd take suffocation damage and see through
-     * blocks. When that happens, the eyes go back to the middle of the hitbox instead, which
-     * is always clear.
-     */
-    public static Vec3 safeEyes(Entity entity, Vec3 feet, Vec3 up, Direction axis, double eyeHeight) {
-        Vec3 eyes = feet.add(up.scale(eyeHeight));
-        if (!insideBlock(entity.level(), eyes)) {
-            return eyes;
-        }
-        return feet.add(axis.getUnitVec3().scale(eyeHeight));
-    }
-
-    /** True if the point is inside a solid part of a block. */
-    private static boolean insideBlock(Level level, Vec3 point) {
-        BlockPos pos = BlockPos.containing(point);
-        BlockState state = level.getBlockState(pos);
-        if (state.isAir()) {
-            return false;
-        }
-        var shape = state.getCollisionShape(level, pos);
-        if (shape.isEmpty()) {
-            return false;
-        }
-        Vec3 local = point.subtract(pos.getX(), pos.getY(), pos.getZ());
-        for (AABB part : shape.toAabbs()) {
-            if (part.inflate(0.05).contains(local)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -253,21 +212,41 @@ public final class GravityFrames {
         return false;
     }
 
+    /** How far under a planet's surface you count as underground, in blocks. */
+    private static final double UNDERGROUND_DEPTH = 1.0;
+    /** How far above your head we look for a cave roof, in blocks. */
+    private static final int ROOF_SEARCH = 16;
+
     /**
-     * Which way is up for this entity now. On a planet each block face is floor or not (see
-     * {@link GravityField#blockUps}), and down only changes at blocks:
-     *
-     * <ol>
-     * <li>Walking forward into a wall whose face is floor: you turn onto the wall.</li>
-     * <li>Walking past the edge of the block you stand on (not jumping): if that block's front
-     * face is floor, you go on walking on it. Otherwise you fall.</li>
-     * <li>Anything else (standing, jumping, falling, landing on a face that is not floor):
-     * down stays as it is. A face that is not floor still holds you up like any block.</li>
-     * </ol>
-     *
-     * One safety: falling away from the planet out past its surface, down goes back to the
-     * planet's zone, so nobody falls into space. Around floating gateway planets down turns
-     * smoothly with the planet instead.
+     * True in a cave: under the planet's surface with rock above your head. Hollow planets
+     * don't count (their tunnels and insides have their own gravity, which must turn).
+     */
+    private static boolean underground(LivingEntity entity, GravityFrame frame, GravityField field) {
+        if (field.shape() == GravityField.Shape.HOLLOW || field.floats()
+                || field.distanceToSurface(entity.position()) > -UNDERGROUND_DEPTH) {
+            return false;
+        }
+        Vec3 up = frame.up();
+        Vec3 head = entity.position().add(up.scale(entity.getBbHeight()));
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        Level level = entity.level();
+        for (int i = 0; i < ROOF_SEARCH; i++) {
+            Vec3 at = head.add(up.scale(i));
+            cursor.set(Math.floor(at.x), Math.floor(at.y), Math.floor(at.z));
+            if (!level.getBlockState(cursor).getCollisionShape(level, cursor).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Ticks after leaving the ground during which "up" still follows the ground. */
+    private static final int GROUND_GRACE_TICKS = 3;
+
+    /**
+     * Which way is up for this entity now. In {@link GravityMode#GROUND} mode, while standing
+     * on something (or just after), it follows the ground around the feet; in the air, and
+     * in {@link GravityMode#CENTER} mode, it is the planet's own pull.
      */
     private static Vec3 upFor(LivingEntity entity, GravityWorld world, GravityFrame frame) {
         int offGround = frame.updateGround(entity.onGround());
@@ -278,125 +257,42 @@ public final class GravityFrames {
         }
         var pull = GravityMath.pull(world, entity.position(), Double.NaN, frame.holdCenter());
         pull.filter(GravityMath.Pull::inField).ifPresent(p -> frame.setHoldCenter(p.field().center()));
-        if (pull.isEmpty()) {
+        Vec3 planetUp = pull.map(GravityMath.Pull::down).orElse(GravityMath.VANILLA_DOWN).scale(-1);
+        if (pull.isPresent() && pull.get().floating()) {
+            // Floating round a gateway planet: turn smoothly with it, no steps.
             frame.setStepUp(null);
-            return GravityMath.VANILLA_DOWN.scale(-1);
+            return planetUp;
         }
-        if (pull.get().floating() || !pull.get().inField()) {
-            // Floating round a gateway planet, or the faint pull from space: turn smoothly.
+        if (pull.isPresent() && pull.get().inField() && underground(entity, frame, pull.get().field())) {
+            // In a cave, gravity stays put, like overworld caves, whatever the tunnel does.
+            Direction step = frame.stepUp() != null ? frame.stepUp() : boxAxis(frame);
+            frame.setStepUp(step);
+            return step.getUnitVec3();
+        }
+        if (world.mode() != GravityMode.STEPS) {
             frame.setStepUp(null);
-            return pull.get().down().scale(-1);
         }
-        GravityField field = pull.get().field();
-        Direction current = frame.stepUp() != null ? frame.stepUp() : field.zoneUp(entity.position());
-        Direction zone = floorUp(entity, frame, field, current, offGround);
-        if (zone == current.getOpposite()) {
-            StuckSafety.middleCrossing(entity, frame, field, zone);
+        if (world.mode() == GravityMode.STEPS) {
+            if (GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
+                frame.setStepUp(null);
+                return planetUp;
+            }
+            Direction step = GravityMath.stepUp(planetUp, frame.stepUp());
+            frame.setStepUp(step);
+            return step.getUnitVec3();
         }
-        frame.setStepUp(zone);
-        return zone.getUnitVec3();
-    }
-
-    /** Ticks after a turn onto another face before a wall can take you again. */
-    private static final int WALL_STEP_COOLDOWN = 10;
-    /** Ticks after leaving the ground during which the front face of your last block still catches you. */
-    private static final int EDGE_CATCH_TICKS = 4;
-    /** Out past the surface by this much (blocks) with down pointing away: back to the planet's pull. */
-    private static final double LOST_DISTANCE = 2.0;
-
-    /** The rules of {@link #upFor} on a planet: which floor the entity stands on. */
-    static Direction floorUp(LivingEntity entity, GravityFrame frame, GravityField field, Direction current,
-            int offGround) {
-        AABB box = entity.getBoundingBox();
+        if (world.mode() != GravityMode.GROUND || offGround > GROUND_GRACE_TICKS
+                || GravityMath.governingField(world.fields(), entity.position()).isEmpty()) {
+            return planetUp;
+        }
         Level level = entity.level();
-        BlockPos floor = floorTouching(level, field, slab(box, current), current);
-        if (floor != null) {
-            frame.setLastFloor(floor.immutable());
-            if (frame.ticksSinceBoxTurn() >= WALL_STEP_COOLDOWN) {
-                Vec3 facing = facing(entity, frame);
-                for (Direction wall : Direction.values()) {
-                    if (wall.getAxis() != current.getAxis() && facing.dot(wall.getUnitVec3()) < -0.7
-                            && floorTouching(level, field, slab(box, wall), wall) != null) {
-                        return wall;
-                    }
-                }
-            }
-            return current;
-        }
-        BlockPos last = frame.lastFloor();
-        boolean jumping = entity.getDeltaMovement().dot(current.getUnitVec3()) > 0.05;
-        if (last != null && offGround <= EDGE_CATCH_TICKS && !jumping
-                && !level.getBlockState(last).getCollisionShape(level, last).isEmpty()) {
-            var ups = field.blockUps(last);
-            for (Direction front : Direction.values()) {
-                if (front.getAxis() != current.getAxis() && ups.contains(front)
-                        && touches(level, last, slab(box, front, EDGE_REACH))) {
-                    return front;
-                }
-            }
-        }
-        Vec3 pos = entity.position();
-        Vec3 toCenter = field.center().subtract(pos);
-        if (field.distanceToSurface(pos) > LOST_DISTANCE && toCenter.dot(current.getUnitVec3()) > 0) {
-            // Down points away from the planet and you are out past its surface.
-            return field.zoneUp(pos, current);
-        }
-        return current;
-    }
-
-    /** How far past an edge (blocks) the front face of your last block still catches you. */
-    private static final double EDGE_REACH = 0.6;
-    /** How close a block face must be to the hitbox to count as touching it, in blocks. */
-    private static final double TOUCH = 0.06;
-
-    /** A thin box just outside the hitbox on its {@code -up} side, a bit narrower than it. */
-    private static AABB slab(AABB box, Direction up) {
-        return slab(box, up, TOUCH);
-    }
-
-    private static AABB slab(AABB box, Direction up, double touch) {
-        double inset = 0.02;
-        double[] min = {box.minX + inset, box.minY + inset, box.minZ + inset};
-        double[] max = {box.maxX - inset, box.maxY - inset, box.maxZ - inset};
-        int i = up.getAxis().ordinal();
-        if (up.getAxisDirection() == Direction.AxisDirection.POSITIVE) {
-            max[i] = box.min(up.getAxis());
-            min[i] = max[i] - touch;
-        } else {
-            min[i] = box.max(up.getAxis());
-            max[i] = min[i] + touch;
-        }
-        return new AABB(min[0], min[1], min[2], max[0], max[1], max[2]);
-    }
-
-    /** The first solid block touching {@code slab} whose face toward it is floor for {@code up}, or null. */
-    private static BlockPos floorTouching(Level level, GravityField field, AABB slab, Direction up) {
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
-        for (int x = (int) Math.floor(slab.minX); x <= (int) Math.floor(slab.maxX); x++) {
-            for (int y = (int) Math.floor(slab.minY); y <= (int) Math.floor(slab.maxY); y++) {
-                for (int z = (int) Math.floor(slab.minZ); z <= (int) Math.floor(slab.maxZ); z++) {
-                    cursor.set(x, y, z);
-                    if (touches(level, cursor, slab) && field.blockUps(cursor).contains(up)) {
-                        return cursor.immutable();
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /** True if the block at {@code pos} is solid and its shape meets {@code slab}. */
-    private static boolean touches(Level level, BlockPos pos, AABB slab) {
-        var shape = level.getBlockState(pos).getCollisionShape(level, pos);
-        if (shape.isEmpty()) {
-            return false;
-        }
-        for (AABB part : shape.toAabbs()) {
-            if (part.move(pos).intersects(slab)) {
-                return true;
-            }
-        }
-        return false;
+        GroundGravity.Solidity solidity = (x, y, z) -> {
+            cursor.set(x, y, z);
+            BlockState state = level.getBlockState(cursor);
+            return !state.isAir() && !state.getCollisionShape(level, cursor).isEmpty();
+        };
+        return GroundGravity.upAt(solidity, entity.position(), frame.up(), planetUp).orElse(planetUp);
     }
 
     /** The way the entity faces, flat in its own frame, in world space. */

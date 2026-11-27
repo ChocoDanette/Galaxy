@@ -48,19 +48,17 @@ public final class GalaxyCommands {
 
     private static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("galaxy")
-                .then(Commands.literal("go").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(GalaxyCommands::go))
-                .then(Commands.literal("timer").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                .then(Commands.literal("go").executes(GalaxyCommands::go))
+                .then(Commands.literal("timer")
                         .executes(GalaxyCommands::timer)
                         .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 6 * 60))
                                 .executes(ctx -> setTimer(ctx, IntegerArgumentType.getInteger(ctx, "minutes")))))
-                .then(Commands.literal("next").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(GalaxyCommands::next))
-                .then(Commands.literal("leave").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(GalaxyCommands::leave))
-                .then(Commands.literal("info").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(GalaxyCommands::info))
-                .then(Commands.literal("find").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                .then(Commands.literal("next").executes(GalaxyCommands::next))
+                .then(Commands.literal("leave").executes(GalaxyCommands::leave))
+                .then(Commands.literal("info").executes(GalaxyCommands::info))
+                .then(Commands.literal("find")
                         .then(Commands.literal("hollow").executes(ctx -> find(ctx, "hollow")))
-                        .then(Commands.literal("round").executes(ctx -> find(ctx, "round")))
-                        .then(Commands.literal("donut").executes(ctx -> find(ctx, "donut")))
-                        .then(Commands.literal("disc").executes(ctx -> find(ctx, "disc")))
                         .then(Commands.literal("gateway").executes(ctx -> find(ctx, "gateway")))
                         .then(Commands.literal("caves").executes(ctx -> find(ctx, "caves")))
                         .then(Commands.literal("trees").executes(ctx -> find(ctx, "trees")))
@@ -76,9 +74,6 @@ public final class GalaxyCommands {
     private static boolean matches(List<Planet> cell, String kind) {
         return switch (kind) {
             case "hollow" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.HOLLOW;
-            case "round" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.SPHERE;
-            case "donut" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.DONUT;
-            case "disc" -> cell.size() == 1 && cell.get(0).shape() == GravityField.Shape.DISC;
             case "gateway" -> cell.size() > 1;
             case "caves" -> cell.stream().anyMatch(Planet::caves);
             case "ember" -> cell.stream().anyMatch(p -> Shrines.of(p) == Shrines.Kind.EMBER);
